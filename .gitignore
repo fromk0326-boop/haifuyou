@@ -1,0 +1,15 @@
+# 秘密情報・認証トークンは絶対にGitHubへ上げない
+.env
+token.json
+
+# Pythonの一時ファイル
+__pycache__/
+*.pyc
+
+# スクリプトの出力結果（都度生成されるもの）
+result.csv
+invoice_result.csv
+
+# 練習で置いた請求書PDF（invoicesフォルダの中身。.gitkeepは残す）
+scripts/invoices/*
+!scripts/invoices/.gitkeep
