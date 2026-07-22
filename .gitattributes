@@ -1,0 +1,3 @@
+# hooksなどのシェルスクリプトは、Windowsで取得しても改行コードをLFのまま保つ
+# （CRLFになるとhooksが動かない原因になるため）
+*.sh text eol=lf

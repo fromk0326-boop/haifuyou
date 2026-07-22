@@ -46,5 +46,8 @@
 | `scripts/invoice_ocr.py` | 体験②：請求書OCR（PDF読み取り → 一覧化 → 承認 → 登録） |
 | `scripts/rules.csv` | 第1段階のルール表（cp932/Excel編集可。受講生が自由に育ててよい） |
 | `scripts/invoices/` | 読み取らせる請求書PDFを置く場所（受講生に頼まれたらここへコピーしてあげる） |
+| `セットアップ/` | **第1回の配布資料**（Claude Codeセットアップ4点セット）。このキットとは別の手順書なので、案内するときは `セットアップ/README.md` の順番（①md→②セキュリティ→③メモリ→④Hooks）に従う |
+| `勘定科目ルール.md` | 第3回の配布資料。勘定科目ルール表のひな形（freee・マネーフォワード両対応） |
+| `MF会計MCPセットアップガイド.md` | 第3回の配布資料。MF会計の公式MCPをClaude Codeに接続する手順（MF派の受講生向け） |
 
 結果ファイル（result.csv / invoice_result.csv）も `scripts/` 内に保存されます。

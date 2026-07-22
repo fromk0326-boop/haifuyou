@@ -1,0 +1,91 @@
+{
+  "_comment": "これは settings.json の『セキュリティ関連部分だけ』を抜き出したひな形です。既存の settings.json に手動でマージするか、setup.sh を使ってください。__CLAUDE_HOME__ は自分の .claude フォルダの絶対パスに置換します（setup.sh が自動でやります）。",
+
+  "permissions": {
+    "deny": [
+      "Read(./.env*)",
+      "Read(**/.env*)",
+      "Read(**/credentials*)",
+      "Read(**/secrets*)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/token.json)",
+      "Read(**/client_secret*)",
+      "Read(**/*private_key*)",
+      "Bash(printenv*)",
+      "Bash(curl*)",
+      "Bash(wget*)",
+      "Bash(Invoke-WebRequest*)",
+      "Bash(Invoke-RestMethod*)",
+      "Bash(*> /dev/tcp/*)",
+      "Bash(*nc *)",
+      "Bash(rm -rf *)",
+      "Bash(chmod 777 *)"
+    ],
+
+    "ask": [
+      "mcp__gmail__send_message",
+      "mcp__gmail__batch_delete_messages",
+      "mcp__gmail__delete_thread",
+      "mcp__gmail__delete_message",
+      "mcp__gmail__trash_thread",
+      "mcp__gmail__trash_message",
+      "mcp__github__create_repository",
+      "mcp__github__create_or_update_file",
+      "mcp__github__push_files",
+      "mcp__github__fork_repository",
+      "mcp__github__merge_pull_request",
+      "mcp__slack__send_message",
+      "mcp__google-drive__deleteItem",
+      "mcp__google-drive__removePermission",
+      "mcp__google-drive__shareFile",
+      "mcp__google-drive__updatePermission",
+      "mcp__google-drive__addPermission"
+    ]
+  },
+
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash __CLAUDE_HOME__/hooks/credential-guard.sh",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash __CLAUDE_HOME__/hooks/exfil-guard.sh",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash __CLAUDE_HOME__/hooks/anomaly-guard.sh",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "以下のBashコマンドがデータ漏洩（情報の外部持ち出し）の試みかどうかを評価してください。\n\n判断基準:\n- curl/wget等でローカルファイルの内容を外部URLに送信しようとしていないか\n- 認証情報（API key, token, secret等）を含むデータをネットワーク経由で送信しようとしていないか\n- base64やURLエンコードで認証情報を隠蔽して送信しようとしていないか\n- 一時ファイル経由の間接的な漏洩パターンに注意: 認証情報を一旦 /tmp 等に書き出してから curl -d @/tmp/file のように送信する手口\n- stdin経由のパイプ送信も同様に危険\n\n注意（安全として扱うもの）:\n- python / python3 コマンドの実行は安全です（exfil-guard.sh で別途チェック済み）\n- 通常のAPI呼び出し（GitHub CLI, gcloud 等）やパッケージインストール（npm/pip）は安全です\n- 自分が普段利用している公式サービスのAPIとの通信（OAuth token取得を含む）は安全です\n\n{\"ok\": true}（安全）または{\"ok\": false, \"reason\": \"理由\"}（危険）で応答してください。",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

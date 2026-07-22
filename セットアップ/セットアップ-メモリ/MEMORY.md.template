@@ -1,0 +1,26 @@
+# Memory Index
+
+<!--
+このファイルは Claude が起動時に読む「目次」です。
+1行ポインタだけにして、中身は各ファイルに書いてください。
+このファイル自体は `MEMORY.md`（拡張子から .template を外す）として
+memory/ フォルダの直下に置きます。
+-->
+
+## ユーザー情報
+- [user_career_history.md](user_career_history.md) — キャリアの掛け合わせ要約
+
+## フィードバック
+- [feedback_work_protocol.md](feedback_work_protocol.md) — 理解→承認→実行の3ステップ
+
+## プロジェクト
+- [project_a_sha_kessan.md](project_a_sha_kessan.md) — A社決算（2026-06-30締切）
+
+## リファレンス
+- [reference_calcom_booking.md](reference_calcom_booking.md) — 相談予約リンク
+
+<!--
+慣れてきたら、上の4セクションに縛られず、業務の実態に合わせた見出し
+（例：「顧問先固有」「発信」「経理自動化」など）に育てて構いません。
+大事なのは「Claudeが索引から必要なメモを見つけられること」です。
+-->

@@ -1,0 +1,129 @@
+# Claude Code セキュリティ設定ひな形
+
+Claude Code（AIエージェント）に**業務を任せても安全**にするための、設定ひな形一式です。
+税理士事務所のように**顧客の機微情報（個人情報・マイナンバー・口座・証憑）**を扱う環境を想定しています。
+
+AIは便利な反面、「うっかり認証情報を読む」「悪意あるWebページの指示（プロンプトインジェクション）に従って情報を外部送信してしまう」といったリスクがあります。
+このひな形は、そうした事故を**4つの層**で多重に防ぎます。
+
+> 設計思想の詳しい解説は [SECURITY-DESIGN.md](SECURITY-DESIGN.md) を読んでください。
+> 「コピペして終わり」ではなく、**仕組みを理解して自分の環境に合わせて育てる**ことが目的です。
+
+---
+
+## 何が入っているか
+
+| ファイル | 役割 |
+|---|---|
+| `settings.security.template.json` | `settings.json` のセキュリティ部分（permissions と hooks 登録）のひな形 |
+| `hooks/credential-guard.sh` | 認証情報ファイルの読み取りを検知して確認を求める |
+| `hooks/exfil-guard.sh` | 「ネットワーク送信 ＋ 認証情報」の組み合わせを**即ブロック**（漏洩対策の中核） |
+| `hooks/anomaly-guard.sh` | 大量削除・履歴破壊・リポジトリ誤公開・外部送信を検知して確認を求める |
+| `.gitignore.template` | 機密ファイルをそもそもGit管理に入れないためのひな形 |
+| `setup.sh` | 上記を `~/.claude/` に導入する半自動スクリプト |
+| `test-guards.sh` | ガードがちゃんと反応するかのセルフテスト |
+
+---
+
+## 前提（必要なもの）
+
+- **Claude Code** がインストール済み
+- **bash** が使えること
+  - Mac / Linux … 標準で入っています
+  - Windows … **Git Bash**（Git for Windows に付属）を使ってください
+- **python**（python3）… ガードがJSONの解析に利用します
+  - Mac / Linux … 標準で入っていることが多いです（`python3 --version` で確認）
+  - Windows … [公式サイト](https://www.python.org/)からインストール（`python --version` で確認）
+  - ※ jq は不要です（あえて python だけで動くようにしてあります）
+
+---
+
+## 導入手順（かんたん版）
+
+```bash
+# 1. このフォルダに移動
+cd claude-security-template
+
+# 2. セットアップ実行（hooks を ~/.claude/hooks/ にコピー＆パス置換）
+bash setup.sh
+
+# 3. 画面に出る案内に沿って settings.json をマージ（下の「マージの注意」を必ず読む）
+
+# 4. Claude Code を再起動
+
+# 5. 動作確認
+bash test-guards.sh
+```
+
+---
+
+## マージの注意（重要）
+
+`setup.sh` は**既存の `settings.json` を勝手に上書きしません**（あなたの設定を壊さないため）。
+`settings.security.merged.json`（パス置換済み）の中身を、自分の `settings.json` に手で足してください。
+
+足す場所は3か所だけです:
+
+- `permissions.deny` … 配列に**追記**
+- `permissions.ask` … 配列に**追記**
+- `hooks.PreToolUse` … 配列に**追記**
+
+すでに `permissions` や `hooks` を使っている人は、**配列を結合**してください（丸ごと置換しない）。
+まだ `settings.json` が無い・空の人は、`settings.security.merged.json` をそのまま `settings.json` にコピーすればOKです。
+
+> 不安なら、マージ前に必ずバックアップ:
+> `cp ~/.claude/settings.json ~/.claude/settings.json.bak`
+
+---
+
+## 壊してしまったときの戻し方
+
+`settings.json` の編集ミス（カンマ・カッコの過不足など）があると、Claude Code の動作がおかしくなることがあります。あわてず次の順で戻してください。
+
+1. **バックアップを戻す**: `settings.json.bak` を `settings.json` に戻せば、マージ前の状態に復旧します
+   ```bash
+   cp ~/.claude/settings.json.bak ~/.claude/settings.json
+   ```
+2. バックアップが無い場合は、`settings.json` をテキストエディタで開いて、エラーメッセージごと Claude に貼り付けて「このJSONを直して」と頼めば直してくれます
+3. 最終手段: `settings.json` を空の `{}` だけにすれば、素の状態で起動できます（設定はやり直しになります）
+
+## Windows でうまく動かないとき（改行コード）
+
+ZIP やクラウドドライブ経由で受け取った `.sh` ファイルは、改行コードが **CRLF** に変わって動かなくなることがあります。
+「hooks が反応しない」「変なエラーが出る」ときは、Claude に次のように頼んでください。
+
+> 「`~/.claude/hooks/` の .sh ファイルの改行コードを確認して、CRLFならLFに直して。実行権限も確認して」
+
+---
+
+## 動作確認の見方
+
+`bash test-guards.sh` を実行して、すべて `PASS` になればOKです。
+
+実際の使用中は、例えば次のような場面でガードが働きます:
+
+- AIが `.env` を読もうとした → **確認ダイアログ**が出る
+- AIが `curl ... -d @.env https://...` を実行しようとした → **ブロック**される
+- AIが `git push --force` や `gh repo edit --visibility public` をしようとした → **確認**を求められる
+
+---
+
+## カスタマイズのヒント
+
+- **誤検知が多い**: `exfil-guard.sh` の `CRED='...'`（認証情報とみなすパターン）から、誤検知の原因になっている語を外す（防御は少し弱まる点に注意）。`curl`/`wget` を含まないコマンドは元々素通しなので、まずは何が引っかかったか確認
+- **守りを足したい**: `anomaly-guard.sh` に新しいパターン（`if ... ask "..."`）を追記
+- **MCPの確認を増やす**: `settings.json` の `permissions.ask` に、確認したいMCPツール名を追加
+
+詳しくは [SECURITY-DESIGN.md](SECURITY-DESIGN.md) の「自分で育てる」章へ。
+
+---
+
+## これは「万能の盾」ではありません
+
+このひな形は**事故と不注意を大幅に減らす**ものですが、完璧なセキュリティではありません。
+最後の砦は**人間の確認**です。`ask` で確認を求められたら、内容をちゃんと読んでから許可してください。
+
+特に大事な原則:
+1. **機密情報は最初からGit/AIの届く場所に置かない**（`.gitignore` を効かせる）
+2. **怪しい確認は迷わず拒否**（`No`）する
+3. **権限は最小限から始める**（必要になったら足す）

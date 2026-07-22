@@ -1,0 +1,47 @@
+# ===== Claude Code / 機密情報をGit管理から除外するひな形 =====
+# プロジェクトのルートに `.gitignore` としてコピーして使ってください。
+# 「コミットしてはいけないもの」を最初から弾くのが、漏洩対策のいちばん簡単で確実な一手です。
+
+# --- 認証情報・秘密鍵（最重要） ---
+.env
+.env.*
+*.pem
+*.key
+*private_key*
+credentials*
+secrets*
+token.json
+client_secret*
+*.credentials.json
+
+# --- Claude Code のローカル作業ファイル（履歴・キャッシュ等） ---
+.claude/history.jsonl
+.claude/sessions/
+.claude/cache/
+.claude/backups/
+.claude/debug/
+.claude/diffs/
+.claude/downloads/
+.claude/file-history/
+.claude/paste-cache/
+.claude/shell-snapshots/
+.claude/tasks/
+.claude/telemetry/
+.claude/projects/
+.claude/.credentials.json
+.claude/.mcp.json
+.claude/mcp-needs-auth-cache.json
+
+# --- OS / エディタ ---
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# --- 顧客データ・証憑など（業務で扱う機微情報。必要に応じて調整） ---
+# 個人情報・マイナンバー・口座番号などを含むファイルは絶対にコミットしない
+*.csv
+*.xlsx
+証憑/
+顧客データ/
