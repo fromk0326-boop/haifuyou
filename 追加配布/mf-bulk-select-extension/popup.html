@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: sans-serif; width: 260px; padding: 10px; margin: 0; }
+    h1 { font-size: 13px; margin: 0 0 8px; }
+    textarea { width: 100%; height: 180px; box-sizing: border-box; font-size: 13px; line-height: 1.6; }
+    button { margin-top: 8px; padding: 6px 14px; border: 1px solid #2c67c8; border-radius: 4px;
+             background: #2c67c8; color: #fff; font-weight: bold; cursor: pointer; }
+    p.note { font-size: 11px; color: #666; margin: 6px 0 0; line-height: 1.5; }
+    #saved { color: #22a559; font-size: 12px; margin-left: 8px; }
+  </style>
+</head>
+<body>
+  <h1>科目ボタンのリスト（1行1科目・最大10件）</h1>
+  <textarea id="list" placeholder="会議費&#10;接待交際費&#10;旅費交通費 …"></textarea>
+  <div>
+    <button id="save">保存</button><span id="saved"></span>
+  </div>
+  <p class="note">MFに登録されている勘定科目名と一致させてください（先頭一致で選択します）。保存するとMFの画面に即反映されます。</p>
+  <script src="popup.js"></script>
+</body>
+</html>

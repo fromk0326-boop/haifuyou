@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "freee勘定科目ボタン",
+  "version": "1.10.1",
+  "description": "freee会計の勘定科目入力欄に、よく使う科目のボタンを重ねて表示し、クリックだけで入力・確定できるようにします。パネルの🔍から勘定科目辞典「これ、何費？」も検索できます。ハタケダッシュボード起動時はAI科目点検（起票済み科目の二次点検・表示のみ）とファイルボックスのAI経理処理（🌸ボタン→承認パネル→登録）、取引・振替伝票詳細ページでの繰返し起票（🔁ボタン→回数と開始月を指定→月末日付で一括複製・プレビュー承認→登録）も動きます。",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://secure.freee.co.jp/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://secure.freee.co.jp/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
