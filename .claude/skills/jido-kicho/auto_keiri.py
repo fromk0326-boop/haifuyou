@@ -18,7 +18,7 @@ freeeの「自動で経理」に溜まった未処理の出金明細を、
        python .claude/skills/jido-kicho/auto_keiri.py
        python .claude/skills/jido-kicho/auto_keiri.py --limit 3   # 件数を変える（初期値5件）
 
-   → 画面に一覧が出て、キットの一番上のフォルダに result.csv も保存されます。
+   → 画面に一覧が出て、「第3回_freeeオート経理/」に result.csv も保存されます。
      各行の先頭に「明細ID」が付きます。
 
 2) 一覧を見て「登録してよい」と判断した明細だけ登録:
@@ -47,7 +47,7 @@ import argparse
 from dotenv import load_dotenv
 import anthropic
 
-# --- キットの一番上のフォルダ（.env / token.json / 結果CSVはここ）--------
+# --- キットの一番上のフォルダ（.env / token.json はここ）-----------------
 # このファイルは .claude/skills/jido-kicho/ にあるので、3つ上がキットのルート。
 KIT_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
@@ -73,7 +73,9 @@ DEFAULT_TAX_CODE = 136
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 RULES_CSV = os.path.join(BASE_DIR, "rules.csv")     # ルール表はスキルと同居
-RESULT_CSV = os.path.join(KIT_ROOT, "result.csv")   # 結果は見つけやすいルートへ
+# 結果CSVは第3回の作業フォルダへ（受講生が開く場所）
+DAI3KAI_DIR = os.path.join(KIT_ROOT, "第3回_freeeオート経理")
+RESULT_CSV = os.path.join(DAI3KAI_DIR, "result.csv")
 
 # 給与・借入・税金など「経費として登録してはいけない」明細を弾くキーワード
 SKIP_KEYWORDS = [

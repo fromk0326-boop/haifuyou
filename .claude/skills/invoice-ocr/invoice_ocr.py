@@ -2,7 +2,7 @@
 """
 体験②：請求書OCR（読み取り）体験版
 
-invoices/ フォルダに置いた請求書PDFを、Claudeに読み取らせて
+「第3回_freeeオート経理/請求書PDFを置く場所/」に置いた請求書PDFを、Claudeに読み取らせて
     取引先名 / 請求日 / 支払期日 / 税込金額 / 内容の要約 /
     勘定科目の候補と理由 / 源泉所得税の対象らしさ
 を一覧にします。
@@ -12,13 +12,13 @@ invoices/ フォルダに置いた請求書PDFを、Claudeに読み取らせて
 ------------------------------------------------------------------------
 使い方
 ------------------------------------------------------------------------
-0) 事前に、キットの一番上にある invoices/ フォルダへ
+0) 事前に「第3回_freeeオート経理/請求書PDFを置く場所/」へ
    請求書PDFを置いてください（何枚でもOK）。
 
 1) まず読み取るだけ（登録はしない。安全）:
        python .claude/skills/invoice-ocr/invoice_ocr.py
 
-   → 一覧が表示され、キットの一番上のフォルダに invoice_result.csv も保存されます。
+   → 一覧が表示され、「第3回_freeeオート経理/」に invoice_result.csv も保存されます。
 
 2) 内容を確認して「登録してよい」と思った1枚を登録:
        python .claude/skills/invoice-ocr/invoice_ocr.py --register --file 請求書A.pdf
@@ -42,7 +42,7 @@ import glob as globmod
 from dotenv import load_dotenv
 import anthropic
 
-# --- キットの一番上のフォルダ（.env / token.json / invoices はここ）------
+# --- キットの一番上のフォルダ（.env / token.json はここ）-----------------
 # このファイルは .claude/skills/invoice-ocr/ にあるので、3つ上がキットのルート。
 KIT_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
@@ -64,9 +64,10 @@ CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 DEFAULT_TAX_CODE = 136  # 課税仕入10%
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# PDF置き場と結果CSVは、受講生が見つけやすいようキットのルートに置きます。
-INVOICE_DIR = os.path.join(KIT_ROOT, "invoices")
-RESULT_CSV = os.path.join(KIT_ROOT, "invoice_result.csv")
+# PDF置き場と結果CSVは、第3回の作業フォルダにまとめます（受講生が開く場所）。
+DAI3KAI_DIR = os.path.join(KIT_ROOT, "第3回_freeeオート経理")
+INVOICE_DIR = os.path.join(DAI3KAI_DIR, "請求書PDFを置く場所")
+RESULT_CSV = os.path.join(DAI3KAI_DIR, "invoice_result.csv")
 
 
 def list_pdfs() -> list[str]:
@@ -244,7 +245,7 @@ def main():
     check_anthropic_key()
     pdfs = list_pdfs()
     if not pdfs:
-        print(f"invoices/ フォルダにPDFがありません。読み取りたい請求書を置いてください。")
+        print("「請求書PDFを置く場所」フォルダにPDFがありません。読み取りたい請求書を置いてください。")
         print(f"  フォルダの場所: {INVOICE_DIR}")
         return
 

@@ -26,7 +26,7 @@ python --version
 キットの一番上のフォルダを作業場所にして実行する：
 
 ```
-pip install -r requirements.txt
+pip install -r 第3回_freeeオート経理/requirements.txt
 ```
 
 エラーが出たら、エラー文を貼ってもらい対処する。
