@@ -19,7 +19,7 @@ description: >-
 python --version
 ```
 
-を実行してもらい、3.10以上ならOK。表示されない・エラーになる場合は README「1. Pythonを用意する」のインストール手順を案内する（「Add python.exe to PATH」のチェックが最重要）。
+を実行してもらい、3.10以上ならOK。表示されない・エラーになる場合は、キット直下の `README.md`「共通の準備：Pythonを用意する」のインストール手順を案内する（「Add python.exe to PATH」のチェックが最重要）。
 
 ### 2. 部品のインストール
 
@@ -40,7 +40,7 @@ copy .env.example .env
 （Macは `cp`）でキット直下のひな形から `.env` を作り、4項目（ANTHROPIC_API_KEY / FREEE_CLIENT_ID / FREEE_CLIENT_SECRET / FREEE_COMPANY_ID）を**受講生自身にメモ帳等で記入してもらう**。
 
 - **重要**: `.env` の中身をチャットに貼らせない・自分で読まない・表示しない
-- 取得場所が分からない場合は README の表（準備3）を参照してもらう
+- 取得場所が分からない場合は `第3回_freeeオート経理/README.md` の「準備（初回だけ）3. 設定ファイル（.env）を作る」の表を参照してもらう
 
 ### 4. コールバックURLの登録
 

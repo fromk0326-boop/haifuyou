@@ -24,7 +24,7 @@
 │   └── SECURITY-DESIGN.md             ②の設計の考え方（興味があれば）
 │
 ├── CLAUDE.md.template                 ①で使う：事務所ルールのひな形
-├── rules/                             ①で使う：persona.md（キャラ）・context7.md
+├── rules/                             ①で使う：persona.md.template（キャラ）・context7.md.template
 ├── settings.security.template.json    ②で使う：設定に足す断片
 ├── .gitignore.template                ②で使う：秘密情報の除外設定のひな形
 ├── setup.sh / test-guards.sh          ②で使う：設置スクリプトと動作確認
@@ -93,9 +93,9 @@
 
 ### ① CLAUDE.mdとrules（最初にやる理由）
 
-AIの性格（`rules/persona.md`）と事務所のルール（`CLAUDE.md.template`）を決めるところです。ここで作る `.claude` フォルダに、②③④が設置物を追加していくので、必ず最初にやってください。
+AIの性格（`rules/persona.md.template`）と事務所のルール（`CLAUDE.md.template`）を決めるところです。ここで作る `.claude` フォルダに、②③④が設置物を追加していくので、必ず最初にやってください。
 
-> `CLAUDE.md.template` は、コピー先で `CLAUDE.md` にリネームして使います（このキットの中でそのままの名前にしてあるのは、キット自身のルールと混ざらないようにするためです）。
+> `.template` が付いたファイルは、**コピー先で `.template` を外してリネーム**して使います（`CLAUDE.md.template` → `CLAUDE.md`、`persona.md.template` → `persona.md`）。キットの中で `.template` を付けてあるのは、**書き換える前の空欄だらけのひな形が、このキットのルールとして読み込まれてしまうのを防ぐため**です。
 
 ### ② セキュリティ（次にやる理由）
 
