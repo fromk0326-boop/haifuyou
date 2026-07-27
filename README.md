@@ -2,11 +2,11 @@
 
 畠山式AI税理士ブートキャンプの配布キットです。このREADMEは**第3回「freeeオート経理（体験版）」**の説明書です。
 
-> このリポジトリには、第1回・第3回の配布資料も入っています。
+> このリポジトリには、第1回・第3回・第4回の配布資料が入っています。回ごとにフォルダを分けてあります。
 >
-> - **第1回の資料**：`.claude/` フォルダ（Claude Codeセットアップ4点セット。そのまま `.claude` として使える形にしてあります。手順は `.claude/README.md` へ）
-> - **第3回の追加資料**：`勘定科目ルール.md`（ルール表のひな形。freee・MF両対応）と `MF会計MCPセットアップガイド.md`（マネーフォワード派の方向け）
-> - **追加配布（Chrome拡張2種）**：`追加配布/` フォルダ（freee勘定科目ボタン／MF会計アシスト。入れ方は各フォルダのREADMEへ）
+> - **第1回**：`.claude/` フォルダ（Claude Codeセットアップ4点セット。そのまま `.claude` として使える形にしてあります。手順は `.claude/README.md` へ）
+> - **第3回**：`第3回_freeeオート経理/` フォルダ（このREADMEの体験①②で使う資料・作業フォルダ一式。目次は同フォルダのREADMEへ）
+> - **第4回**：`第4回_Chrome拡張/` フォルダ（freee勘定科目ボタン／MF会計アシスト。入れ方は同フォルダのREADMEへ）
 
 freee APIとClaude（AI）を組み合わせて、経理の一部を自動化する流れを体験できます。
 
@@ -105,7 +105,7 @@ python --version
 このフォルダの中でコマンド画面を開き、次を実行します。
 
 ```
-pip install -r requirements.txt
+pip install -r 第3回_freeeオート経理/requirements.txt
 ```
 
 これで `requests`（freee通信用）、`anthropic`（Claude用）、`python-dotenv`（設定読み込み用）が入ります。
@@ -168,7 +168,7 @@ python .claude/skills/jido-kicho/auto_keiri.py
 
 - freeeの未処理の**出金明細**を最大5件取ってきます。
 - 各明細を2段階（ルール判定 → ルール外だけAI判定）で仕分けし、結果を一覧表示します。
-- 同じ内容を `result.csv`（このフォルダの直下。Excelで開けます）にも保存します。
+- 同じ内容を `第3回_freeeオート経理/result.csv`（Excelで開けます）にも保存します。
 - 件数を変えたいときは `--limit` を付けます（例：3件だけ）。
   ```
   python .claude/skills/jido-kicho/auto_keiri.py --limit 3
@@ -200,7 +200,7 @@ python .claude/skills/jido-kicho/auto_keiri.py --register --ids 123,456
 
 ### 1. 請求書PDFを置く
 
-このフォルダ直下の `invoices/` に、読み取らせたい請求書PDFを置きます（何枚でもOK）。
+`第3回_freeeオート経理/請求書PDFを置く場所/` に、読み取らせたい請求書PDFを置きます（何枚でもOK）。
 
 > フォルダを探すのが面倒なときは、Claude Codeに「デスクトップの◯◯.pdfを読み取り用フォルダに入れて」と頼めばコピーしてくれます。
 
@@ -210,7 +210,7 @@ python .claude/skills/jido-kicho/auto_keiri.py --register --ids 123,456
 python .claude/skills/invoice-ocr/invoice_ocr.py
 ```
 
-各PDFについて、取引先名・請求日・支払期日・税込金額・内容の要約・勘定科目の候補・源泉所得税の対象らしさを一覧表示し、このフォルダ直下の `invoice_result.csv` にも保存します。
+各PDFについて、取引先名・請求日・支払期日・税込金額・内容の要約・勘定科目の候補・源泉所得税の対象らしさを一覧表示し、`第3回_freeeオート経理/invoice_result.csv` にも保存します。
 
 ### 3. 確認して1枚を登録する
 
@@ -245,19 +245,18 @@ python .claude/skills/invoice-ocr/invoice_ocr.py --register --file 請求書A.pd
 
 ## このフォルダの中身
 
-| ファイル | 役割 |
+一番上（ルート）には、**全員が使うもの**だけを置いています。回ごとの資料はフォルダに分けてあります。
+
+| ファイル / フォルダ | 役割 |
 |----------|------|
 | `README.md` | この説明書 |
 | `CLAUDE.md` | Claude Code用の案内ルール（このフォルダを開くと自動で読み込まれます） |
 | `.gitignore` | 秘密情報を誤って共有しないための除外設定 |
 | `.env.example` | 設定ファイルのひな形（コピーして`.env`を作る） |
 | `.env` | あなたが作る設定ファイル（準備3で作成。ここだけ自分で書きます） |
-| `requirements.txt` | 必要な部品の一覧（`pip install`で使う） |
-| `invoices/` | 読み取らせる請求書PDFを置くフォルダ |
-| `.claude/skills/` | 体験①②のスキル一式（手順書＋プログラム本体。下記） |
-| `.claude/` の skills 以外 | **第1回の配布資料**：Claude Codeセットアップ4点セット（md・セキュリティ・メモリ・Hooks）。進め方は `.claude/README.md` |
-| `勘定科目ルール.md` | **第3回の配布資料**：勘定科目ルール表のひな形（freee・マネーフォワード両対応） |
-| `MF会計MCPセットアップガイド.md` | **第3回の配布資料**：MF会計の公式MCPサーバーをClaude Codeに接続する手順 |
+| `.claude/` | **第1回の配布資料**：Claude Codeセットアップ4点セット（md・セキュリティ・メモリ・Hooks）。進め方は `.claude/README.md`。**ここには第3回のスキル（体験①②の手順書とプログラム本体）も入っています**（下記） |
+| `第3回_freeeオート経理/` | **第3回の配布資料と作業フォルダ**（勘定科目ルール・MF会計MCPガイド・requirements.txt・請求書PDF置き場・結果CSV） |
+| `第4回_Chrome拡張/` | **第4回の配布資料**：freee勘定科目ボタン／MF会計アシスト（Chrome拡張2種） |
 
 `.claude/skills/` の中身（スキル＝「セットアップして」「体験①」等で発動する手順書。プログラム本体も同じフォルダに入れてあります）：
 
@@ -271,4 +270,6 @@ python .claude/skills/invoice-ocr/invoice_ocr.py --register --file 請求書A.pd
 | `invoice-ocr/SKILL.md` | 体験②：請求書OCRの手順書 |
 | `invoice-ocr/invoice_ocr.py` | 体験②のプログラム本体 |
 
-> 結果ファイル（`result.csv` / `invoice_result.csv`）と `token.json` は、このフォルダの直下に作られます。
+> スキルだけ `.claude/skills/` に置いているのは、Claude Codeが**この場所しかスキルとして認識しない**という決まりがあるためです（他の場所に移すと「体験①をやりたい」で発動しなくなります）。
+>
+> `token.json` はこのフォルダの直下に、結果ファイル（`result.csv` / `invoice_result.csv`）は `第3回_freeeオート経理/` の中に作られます。

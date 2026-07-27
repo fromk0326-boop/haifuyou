@@ -25,7 +25,7 @@
 
 ## セットアップとエラー対応
 
-- 初回セットアップは `README.md` の「準備（初回だけ）」の順番どおりに案内してください（Python確認 → pip install → .env作成 → コールバックURL登録 → freee_auth.py）
+- 初回セットアップは `README.md` の「準備（初回だけ）」の順番どおりに案内してください（Python確認 → `pip install -r 第3回_freeeオート経理/requirements.txt` → .env作成 → コールバックURL登録 → freee_auth.py）
 - コマンドは必ず**このフォルダ（キットの一番上）を作業場所にして**実行してください。スクリプト本体は各スキルのフォルダ `.claude/skills/<スキル名>/` にあります（例：`python .claude/skills/jido-kicho/auto_keiri.py`）
 - `.env` はこのフォルダの直下に作ります（スクリプトが自動で見つけます）
 - エラー文を貼り付けられたら、原因を平易な言葉で説明してから直し方を1つずつ案内してください
@@ -36,17 +36,27 @@
 
 ## このフォルダの構成
 
-| ファイル | 役割 |
+ルート（キットの一番上）には**全員が使うもの**だけを置き、回ごとの資料はフォルダに分けてあります。
+
+| ファイル / フォルダ | 役割 |
 |----------|------|
 | `README.md` | 受講生向けの説明書（迷ったらまずここを参照） |
 | `.env` | 受講生が作る設定ファイル（フォルダ直下。読まない・表示しない） |
-| `invoices/` | 読み取らせる請求書PDFを置く場所（受講生に頼まれたらここへコピーしてあげる） |
-| `requirements.txt` | 必要なライブラリの一覧（`pip install -r requirements.txt`） |
 | `.claude/skills/setup/` | 手順書（SKILL.md）＋ `freee_auth.py`（freee認証。token.json はキット直下にできる） |
 | `.claude/skills/jido-kicho/` | 手順書＋ `auto_keiri.py`（体験①：自動記帳）＋ `rules.csv`（第1段階のルール表。cp932/Excel編集可） |
 | `.claude/skills/invoice-ocr/` | 手順書＋ `invoice_ocr.py`（体験②：請求書OCR） |
 | `.claude/` の skills 以外 | **第1回の配布資料**（Claude Codeセットアップ4点セット）。このキットとは別の話なので、案内するときは `.claude/README.md` の順番（①md→②セキュリティ→③メモリ→④Hooks）に従う |
-| `勘定科目ルール.md` | 第3回の配布資料。勘定科目ルール表のひな形（freee・マネーフォワード両対応） |
-| `MF会計MCPセットアップガイド.md` | 第3回の配布資料。MF会計の公式MCPをClaude Codeに接続する手順（MF派の受講生向け） |
+| `第3回_freeeオート経理/` | **第3回の資料と作業フォルダ**（下記） |
+| `第4回_Chrome拡張/` | **第4回の配布資料**。Chrome拡張2種（freee勘定科目ボタン／MF会計アシスト）。入れ方は各サブフォルダのREADMEに従って案内する |
 
-結果ファイル（result.csv / invoice_result.csv）は、受講生が見つけやすいようキットの一番上のフォルダに保存されます。
+`第3回_freeeオート経理/` の中身：
+
+| ファイル / フォルダ | 役割 |
+|----------|------|
+| `勘定科目ルール.md` | 勘定科目ルール表のひな形（freee・マネーフォワード両対応）。**AIへの指示セクションがあるので、仕分けの相談を受けたら必ず読む** |
+| `MF会計MCPセットアップガイド.md` | MF会計の公式MCPをClaude Codeに接続する手順（MF派の受講生向け） |
+| `requirements.txt` | 必要なライブラリの一覧（`pip install -r 第3回_freeeオート経理/requirements.txt`） |
+| `請求書PDFを置く場所/` | 体験②で読み取らせる請求書PDFを置く場所（受講生に頼まれたらここへコピーしてあげる） |
+| `result.csv` / `invoice_result.csv` | 実行するとここに作られる結果ファイル（Excelで開ける） |
+
+スキル（`.claude/skills/`）だけは、Claude Codeがこの場所しかスキルとして認識しないため、第3回のものでも `.claude/` の下に置いています。「読む資料は第3回フォルダ、動かすものは skills」と説明してください。
