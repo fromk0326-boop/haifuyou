@@ -11,5 +11,8 @@ result.csv
 invoice_result.csv
 
 # 練習で置いた請求書PDF（invoicesフォルダの中身。.gitkeepは残す）
-scripts/invoices/*
-!scripts/invoices/.gitkeep
+invoices/*
+!invoices/.gitkeep
+
+# セキュリティひな形のsetup.shが生成する、パス置換済みの設定断片
+.claude/settings.security.merged.json

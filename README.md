@@ -4,7 +4,7 @@
 
 > このリポジトリには、第1回・第3回の配布資料も入っています。
 >
-> - **第1回の資料**：`セットアップ/` フォルダ（Claude Codeセットアップ4点セット。手順は `セットアップ/README.md` へ）
+> - **第1回の資料**：`.claude/` フォルダ（Claude Codeセットアップ4点セット。そのまま `.claude` として使える形にしてあります。手順は `.claude/README.md` へ）
 > - **第3回の追加資料**：`勘定科目ルール.md`（ルール表のひな形。freee・MF両対応）と `MF会計MCPセットアップガイド.md`（マネーフォワード派の方向け）
 > - **追加配布（Chrome拡張2種）**：`追加配布/` フォルダ（freee勘定科目ボタン／MF会計アシスト。入れ方は各フォルダのREADMEへ）
 
@@ -105,7 +105,7 @@ python --version
 このフォルダの中でコマンド画面を開き、次を実行します。
 
 ```
-pip install -r scripts/requirements.txt
+pip install -r requirements.txt
 ```
 
 これで `requests`（freee通信用）、`anthropic`（Claude用）、`python-dotenv`（設定読み込み用）が入ります。
@@ -146,14 +146,14 @@ http://127.0.0.1:8088/callback
 次を実行すると、ブラウザが開きます。freeeにログインして「許可する」を押してください。
 
 ```
-python scripts/freee_auth.py
+python .claude/skills/setup/freee_auth.py
 ```
 
-成功すると `token.json` が作られ、以降はこのファイルを自動で使います。
+成功すると、このフォルダの直下に `token.json` が作られ、以降はこのファイルを自動で使います。
 
 > 事業所ID（`FREEE_COMPANY_ID`）がわからない場合は、認証後に次を実行すると一覧が出ます。
 > ```
-> python scripts/freee_auth.py --companies
+> python .claude/skills/setup/freee_auth.py --companies
 > ```
 
 ---
@@ -163,15 +163,15 @@ python scripts/freee_auth.py
 ### まずは「見るだけ」（登録しないので安全です）
 
 ```
-python scripts/auto_keiri.py
+python .claude/skills/jido-kicho/auto_keiri.py
 ```
 
 - freeeの未処理の**出金明細**を最大5件取ってきます。
 - 各明細を2段階（ルール判定 → ルール外だけAI判定）で仕分けし、結果を一覧表示します。
-- 同じ内容を `result.csv`（`scripts/` 内。Excelで開けます）にも保存します。
+- 同じ内容を `result.csv`（このフォルダの直下。Excelで開けます）にも保存します。
 - 件数を変えたいときは `--limit` を付けます（例：3件だけ）。
   ```
-  python scripts/auto_keiri.py --limit 3
+  python .claude/skills/jido-kicho/auto_keiri.py --limit 3
   ```
 
 一覧では、各明細の先頭に「明細ID」が付き、判定が次のどれかになります。
@@ -189,7 +189,7 @@ python scripts/auto_keiri.py
 一覧を見て、登録してよいと判断した明細の「明細ID」を指定して実行します。
 
 ```
-python scripts/auto_keiri.py --register --ids 123,456
+python .claude/skills/jido-kicho/auto_keiri.py --register --ids 123,456
 ```
 
 指定したIDのうち「登録候補」のものだけ、freeeに取引登録されます。
@@ -200,24 +200,24 @@ python scripts/auto_keiri.py --register --ids 123,456
 
 ### 1. 請求書PDFを置く
 
-`scripts/invoices/` フォルダに、読み取らせたい請求書PDFを置きます（何枚でもOK）。
+このフォルダ直下の `invoices/` に、読み取らせたい請求書PDFを置きます（何枚でもOK）。
 
 > フォルダを探すのが面倒なときは、Claude Codeに「デスクトップの◯◯.pdfを読み取り用フォルダに入れて」と頼めばコピーしてくれます。
 
 ### 2. 読み取る（登録しないので安全です）
 
 ```
-python scripts/invoice_ocr.py
+python .claude/skills/invoice-ocr/invoice_ocr.py
 ```
 
-各PDFについて、取引先名・請求日・支払期日・税込金額・内容の要約・勘定科目の候補・源泉所得税の対象らしさを一覧表示し、`invoice_result.csv` にも保存します。
+各PDFについて、取引先名・請求日・支払期日・税込金額・内容の要約・勘定科目の候補・源泉所得税の対象らしさを一覧表示し、このフォルダ直下の `invoice_result.csv` にも保存します。
 
 ### 3. 確認して1枚を登録する
 
 内容（特に金額と日付）を確認したうえで、登録したい請求書を指定します。
 
 ```
-python scripts/invoice_ocr.py --register --file 請求書A.pdf
+python .claude/skills/invoice-ocr/invoice_ocr.py --register --file 請求書A.pdf
 ```
 
 ---
@@ -252,19 +252,23 @@ python scripts/invoice_ocr.py --register --file 請求書A.pdf
 | `.gitignore` | 秘密情報を誤って共有しないための除外設定 |
 | `.env.example` | 設定ファイルのひな形（コピーして`.env`を作る） |
 | `.env` | あなたが作る設定ファイル（準備3で作成。ここだけ自分で書きます） |
-| `.claude/skills/setup/` ほか | Claude Code用のスキル（「セットアップして」「体験①」等で発動する手順書） |
-| `scripts/` | プログラム本体一式（下記） |
-| `セットアップ/` | **第1回の配布資料**：Claude Codeセットアップ4点セット（md・セキュリティ・メモリ・Hooks）。進め方は `セットアップ/README.md` |
+| `requirements.txt` | 必要な部品の一覧（`pip install`で使う） |
+| `invoices/` | 読み取らせる請求書PDFを置くフォルダ |
+| `.claude/skills/` | 体験①②のスキル一式（手順書＋プログラム本体。下記） |
+| `.claude/` の skills 以外 | **第1回の配布資料**：Claude Codeセットアップ4点セット（md・セキュリティ・メモリ・Hooks）。進め方は `.claude/README.md` |
 | `勘定科目ルール.md` | **第3回の配布資料**：勘定科目ルール表のひな形（freee・マネーフォワード両対応） |
 | `MF会計MCPセットアップガイド.md` | **第3回の配布資料**：MF会計の公式MCPサーバーをClaude Codeに接続する手順 |
 
-`scripts/` の中身：
+`.claude/skills/` の中身（スキル＝「セットアップして」「体験①」等で発動する手順書。プログラム本体も同じフォルダに入れてあります）：
 
-| ファイル | 役割 |
+| フォルダ / ファイル | 役割 |
 |----------|------|
-| `requirements.txt` | 必要な部品の一覧（`pip install`で使う） |
-| `freee_auth.py` | freeeの認証（トークン取得・更新） |
-| `rules.csv` | 勘定科目とキーワードの表（第1段階のルール。畠山の事務所で実際に使っているルール表から、汎用的なキーワード約160個を抜き出したもの。自由に編集可） |
-| `auto_keiri.py` | 体験①：自動記帳 |
-| `invoice_ocr.py` | 体験②：請求書OCR |
-| `invoices/` | 読み取らせる請求書PDFを置くフォルダ |
+| `setup/SKILL.md` | 準備（初回だけ）の手順書 |
+| `setup/freee_auth.py` | freeeの認証（トークン取得・更新） |
+| `jido-kicho/SKILL.md` | 体験①：自動記帳の手順書 |
+| `jido-kicho/auto_keiri.py` | 体験①のプログラム本体 |
+| `jido-kicho/rules.csv` | 勘定科目とキーワードの表（第1段階のルール。畠山の事務所で実際に使っているルール表から、汎用的なキーワード約160個を抜き出したもの。自由に編集可） |
+| `invoice-ocr/SKILL.md` | 体験②：請求書OCRの手順書 |
+| `invoice-ocr/invoice_ocr.py` | 体験②のプログラム本体 |
+
+> 結果ファイル（`result.csv` / `invoice_result.csv`）と `token.json` は、このフォルダの直下に作られます。

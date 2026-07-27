@@ -12,15 +12,16 @@ invoices/ フォルダに置いた請求書PDFを、Claudeに読み取らせて
 ------------------------------------------------------------------------
 使い方
 ------------------------------------------------------------------------
-0) 事前に invoices/ フォルダへ請求書PDFを置いてください（何枚でもOK）。
+0) 事前に、キットの一番上にある invoices/ フォルダへ
+   請求書PDFを置いてください（何枚でもOK）。
 
 1) まず読み取るだけ（登録はしない。安全）:
-       python scripts/invoice_ocr.py
+       python .claude/skills/invoice-ocr/invoice_ocr.py
 
-   → 一覧が表示され、invoice_result.csv も保存されます。
+   → 一覧が表示され、キットの一番上のフォルダに invoice_result.csv も保存されます。
 
 2) 内容を確認して「登録してよい」と思った1枚を登録:
-       python scripts/invoice_ocr.py --register --file 請求書A.pdf
+       python .claude/skills/invoice-ocr/invoice_ocr.py --register --file 請求書A.pdf
 
 ------------------------------------------------------------------------
 注意
@@ -41,6 +42,14 @@ import glob as globmod
 from dotenv import load_dotenv
 import anthropic
 
+# --- キットの一番上のフォルダ（.env / token.json / invoices はここ）------
+# このファイルは .claude/skills/invoice-ocr/ にあるので、3つ上がキットのルート。
+KIT_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
+)
+# freee認証は setup スキルの freee_auth.py を共通で使います。
+sys.path.insert(0, os.path.join(KIT_ROOT, ".claude", "skills", "setup"))
+
 from freee_auth import get_access_token, freee_get, freee_post
 
 # --- Windowsで日本語が文字化けしないようにする（おまじない）-------------
@@ -49,14 +58,15 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True)
 
-load_dotenv()
+load_dotenv(os.path.join(KIT_ROOT, ".env"))
 
 CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 DEFAULT_TAX_CODE = 136  # 課税仕入10%
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-INVOICE_DIR = os.path.join(BASE_DIR, "invoices")
-RESULT_CSV = os.path.join(BASE_DIR, "invoice_result.csv")
+# PDF置き場と結果CSVは、受講生が見つけやすいようキットのルートに置きます。
+INVOICE_DIR = os.path.join(KIT_ROOT, "invoices")
+RESULT_CSV = os.path.join(KIT_ROOT, "invoice_result.csv")
 
 
 def list_pdfs() -> list[str]:
@@ -148,7 +158,7 @@ def print_table(rows: list[dict]) -> None:
     print("\n" + "-" * 78)
     if rows:
         print("  登録するには、内容を確認のうえ次のように実行します:")
-        print(f"    python scripts/invoice_ocr.py --register --file {rows[0]['file']}")
+        print(f"    python .claude/skills/invoice-ocr/invoice_ocr.py --register --file {rows[0]['file']}")
     print("-" * 78)
 
 

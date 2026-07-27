@@ -26,7 +26,7 @@ CLAUDE.md・Memory までで「AI が事務所の前提を読み込む」状態�
 
 ## 前提条件
 
-- 「セットアップ-mdファイル」で CLAUDE.md を設置済み
+- ①（`docs/1_CLAUDE.mdとrules.md`）で CLAUDE.md を設置済み
 - Mac または Windows（Git Bash / WSL 環境）
 
 ---
@@ -109,7 +109,7 @@ Windows（Git Bash）の場合、`~` は `/c/Users/あなたの名前` に相当
 }
 ```
 
-> 「セットアップ-セキュリティ」で `settings.json` を既に設置している場合は、既存の `"hooks"` ブロックの中に `SessionStart` / `PostCompact` を**追記**してください（`PreToolUse` を上書きしないよう注意）。
+> ②（`docs/2_セキュリティ.md`）で `settings.json` を既に設置している場合は、既存の `"hooks"` ブロックの中に `SessionStart` / `PostCompact` を**追記**してください（`PreToolUse` を上書きしないよう注意）。
 
 ---
 

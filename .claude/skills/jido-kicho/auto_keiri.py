@@ -15,14 +15,14 @@ freeeの「自動で経理」に溜まった未処理の出金明細を、
 使い方
 ------------------------------------------------------------------------
 1) まず中身を見るだけ（登録はしない。安全）:
-       python scripts/auto_keiri.py
-       python scripts/auto_keiri.py --limit 3      # 取ってくる件数を変える（初期値5件）
+       python .claude/skills/jido-kicho/auto_keiri.py
+       python .claude/skills/jido-kicho/auto_keiri.py --limit 3   # 件数を変える（初期値5件）
 
-   → 画面に一覧が出て、result.csv も保存されます。
+   → 画面に一覧が出て、キットの一番上のフォルダに result.csv も保存されます。
      各行の先頭に「明細ID」が付きます。
 
 2) 一覧を見て「登録してよい」と判断した明細だけ登録:
-       python scripts/auto_keiri.py --register --ids 123,456
+       python .claude/skills/jido-kicho/auto_keiri.py --register --ids 123,456
 
    → 指定したIDのうち「登録候補」になっているものだけ、freeeに取引登録します。
 
@@ -47,6 +47,14 @@ import argparse
 from dotenv import load_dotenv
 import anthropic
 
+# --- キットの一番上のフォルダ（.env / token.json / 結果CSVはここ）--------
+# このファイルは .claude/skills/jido-kicho/ にあるので、3つ上がキットのルート。
+KIT_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
+)
+# freee認証は setup スキルの freee_auth.py を共通で使います。
+sys.path.insert(0, os.path.join(KIT_ROOT, ".claude", "skills", "setup"))
+
 from freee_auth import get_access_token, freee_get, freee_post
 
 # --- Windowsで日本語が文字化けしないようにする（おまじない）-------------
@@ -55,7 +63,7 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True)
 
-load_dotenv()
+load_dotenv(os.path.join(KIT_ROOT, ".env"))
 
 # Claudeのモデル（速くて安いHaikuを使います）
 CLAUDE_MODEL = "claude-haiku-4-5-20251001"
@@ -64,8 +72,8 @@ CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 DEFAULT_TAX_CODE = 136
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-RULES_CSV = os.path.join(BASE_DIR, "rules.csv")
-RESULT_CSV = os.path.join(BASE_DIR, "result.csv")
+RULES_CSV = os.path.join(BASE_DIR, "rules.csv")     # ルール表はスキルと同居
+RESULT_CSV = os.path.join(KIT_ROOT, "result.csv")   # 結果は見つけやすいルートへ
 
 # 給与・借入・税金など「経費として登録してはいけない」明細を弾くキーワード
 SKIP_KEYWORDS = [
@@ -274,7 +282,7 @@ def print_table(results: list[dict]) -> None:
     ids = [str(r["id"]) for r in results if r["verdict"] == "登録候補"]
     if ids:
         print("  登録候補の明細を登録するには、次のように実行します:")
-        print(f"    python scripts/auto_keiri.py --register --ids {','.join(ids)}")
+        print(f"    python .claude/skills/jido-kicho/auto_keiri.py --register --ids {','.join(ids)}")
     else:
         print("  今回は「登録候補」がありませんでした。")
     print("-" * 78)
@@ -387,7 +395,7 @@ def main():
     if args.register:
         if not args.ids.strip():
             print("\n  --register には --ids で明細IDの指定が必要です。")
-            print("  例: python scripts/auto_keiri.py --register --ids 123,456")
+            print("  例: python .claude/skills/jido-kicho/auto_keiri.py --register --ids 123,456")
             return
         target_ids = set()
         for part in args.ids.split(","):

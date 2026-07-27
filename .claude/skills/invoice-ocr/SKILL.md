@@ -12,7 +12,7 @@ description: >-
 
 ### 1. PDFを置いてもらう
 
-`scripts/invoices/` フォルダに請求書PDFを置いてもらう（何枚でもOK）。
+キット直下の `invoices/` フォルダに請求書PDFを置いてもらう（何枚でもOK）。
 受講生が「デスクトップにある」等と言ったら、**代わりにこのフォルダへコピーしてあげる**。
 テスト用なら、金額の小さい・内容が単純な請求書から始めるよう勧める。
 
@@ -21,12 +21,12 @@ description: >-
 キットの一番上のフォルダを作業場所にして：
 
 ```
-python scripts/invoice_ocr.py
+python .claude/skills/invoice-ocr/invoice_ocr.py
 ```
 
 - 各PDFの取引先名・請求日・支払期日・税込金額・内容の要約・勘定科目の候補・源泉所得税の対象らしさを一覧表示する
 - この段階では**何も登録されない**ことを伝える
-- 結果は `scripts/invoice_result.csv` にも保存される
+- 結果はキット直下の `invoice_result.csv` にも保存される
 
 ### 3. 結果を一緒に確認する
 
@@ -39,7 +39,7 @@ python scripts/invoice_ocr.py
 受講生が内容（特に金額・日付）を確認して承認した場合のみ：
 
 ```
-python scripts/invoice_ocr.py --register --file 請求書A.pdf
+python .claude/skills/invoice-ocr/invoice_ocr.py --register --file 請求書A.pdf
 ```
 
 - ファイル名を特定して承認されたものだけ登録する

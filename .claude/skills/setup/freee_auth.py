@@ -7,13 +7,14 @@ freee APIを使うには「アクセストークン」が必要です。
 トークンを token.json に保存する処理をまとめたものです。
 
 ■ 初回の認証（当日一緒にやります）:
-    python scripts/freee_auth.py
+    python .claude/skills/setup/freee_auth.py
 
     → ブラウザが開くので、freeeにログインして「許可する」を押すと
-      token.json が作られます。以降は auto_keiri.py などが自動で使います。
+      キットの一番上のフォルダに token.json が作られます。
+      以降は auto_keiri.py などが自動で使います。
 
 ■ 事業所ID（company_id）の一覧を見たいとき:
-    python scripts/freee_auth.py --companies
+    python .claude/skills/setup/freee_auth.py --companies
 
 ■ 他のスクリプト（auto_keiri.py / invoice_ocr.py）は、このファイルの
   get_access_token() を呼ぶだけでトークンを受け取れます。
@@ -47,7 +48,13 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True)
 
-load_dotenv()
+# --- キットの一番上のフォルダ（.env / token.json はここに置きます）-------
+# このファイルは .claude/skills/setup/ にあるので、3つ上がキットのルート。
+KIT_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
+)
+
+load_dotenv(os.path.join(KIT_ROOT, ".env"))
 
 # --- freeeの固定URL（変更不要）-----------------------------------------
 AUTHORIZE_URL = "https://accounts.secure.freee.co.jp/public_api/authorize"
@@ -59,8 +66,10 @@ CALLBACK_HOST = "127.0.0.1"
 CALLBACK_PORT = 8088
 REDIRECT_URI = f"http://{CALLBACK_HOST}:{CALLBACK_PORT}/callback"
 
-# --- トークンの保存先（このファイルと同じフォルダの token.json）----------
-TOKEN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "token.json")
+# --- トークンの保存先（キットの一番上のフォルダの token.json）------------
+# スキルごとにスクリプトが分かれているので、全スキルが同じ1つのトークンを
+# 使えるよう、保存先はキットのルートに固定します。
+TOKEN_FILE = os.path.join(KIT_ROOT, "token.json")
 
 
 def _is_placeholder(v: str) -> bool:
