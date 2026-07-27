@@ -26,7 +26,7 @@ python --version
 キットの一番上のフォルダを作業場所にして実行する：
 
 ```
-pip install -r scripts/requirements.txt
+pip install -r requirements.txt
 ```
 
 エラーが出たら、エラー文を貼ってもらい対処する。
@@ -53,21 +53,21 @@ http://127.0.0.1:8088/callback
 ### 5. freee認証
 
 ```
-python scripts/freee_auth.py
+python .claude/skills/setup/freee_auth.py
 ```
 
-ブラウザが開くので、freeeにログインして「許可する」を押してもらう。`scripts/token.json` ができれば成功。
+ブラウザが開くので、freeeにログインして「許可する」を押してもらう。キット直下に `token.json` ができれば成功。
 
 事業所IDが不明な場合は認証後に：
 
 ```
-python scripts/freee_auth.py --companies
+python .claude/skills/setup/freee_auth.py --companies
 ```
 
 ### 6. 動作確認
 
 ```
-python scripts/auto_keiri.py --limit 1
+python .claude/skills/jido-kicho/auto_keiri.py --limit 1
 ```
 
 明細が1件表示されればセットアップ完了。「体験①に進みましょう」と案内する。

@@ -14,7 +14,7 @@
 
 - 何かを実行する前に「これから何をするか」「何が起きるか」を先に説明してください
 - freeeへの登録（`--register`）は、**受講生が明細ID・金額・内容を確認して「OK」と言ってから**実行してください。勝手に登録してはいけません
-- まずは「見るだけモード」（`python scripts/auto_keiri.py` / `python scripts/invoice_ocr.py`）から始めてください
+- まずは「見るだけモード」（`python .claude/skills/jido-kicho/auto_keiri.py` / `python .claude/skills/invoice-ocr/invoice_ocr.py`）から始めてください
 
 ## 安全ルール（必ず守る）
 
@@ -26,7 +26,7 @@
 ## セットアップとエラー対応
 
 - 初回セットアップは `README.md` の「準備（初回だけ）」の順番どおりに案内してください（Python確認 → pip install → .env作成 → コールバックURL登録 → freee_auth.py）
-- コマンドは必ず**このフォルダ（キットの一番上）を作業場所にして**実行してください。スクリプト本体は `scripts/` にあります（例：`python scripts/auto_keiri.py`）
+- コマンドは必ず**このフォルダ（キットの一番上）を作業場所にして**実行してください。スクリプト本体は各スキルのフォルダ `.claude/skills/<スキル名>/` にあります（例：`python .claude/skills/jido-kicho/auto_keiri.py`）
 - `.env` はこのフォルダの直下に作ります（スクリプトが自動で見つけます）
 - エラー文を貼り付けられたら、原因を平易な言葉で説明してから直し方を1つずつ案内してください
 - よくあるつまずき：
@@ -40,14 +40,13 @@
 |----------|------|
 | `README.md` | 受講生向けの説明書（迷ったらまずここを参照） |
 | `.env` | 受講生が作る設定ファイル（フォルダ直下。読まない・表示しない） |
-| `.claude/skills/setup` ほか | 各体験の手順書（スキル） |
-| `scripts/freee_auth.py` | freee認証（token.json の作成・更新。token.jsonもこのフォルダにできる） |
-| `scripts/auto_keiri.py` | 体験①：自動記帳（ルール判定 → AI判定 → 承認 → 登録） |
-| `scripts/invoice_ocr.py` | 体験②：請求書OCR（PDF読み取り → 一覧化 → 承認 → 登録） |
-| `scripts/rules.csv` | 第1段階のルール表（cp932/Excel編集可。受講生が自由に育ててよい） |
-| `scripts/invoices/` | 読み取らせる請求書PDFを置く場所（受講生に頼まれたらここへコピーしてあげる） |
-| `セットアップ/` | **第1回の配布資料**（Claude Codeセットアップ4点セット）。このキットとは別の手順書なので、案内するときは `セットアップ/README.md` の順番（①md→②セキュリティ→③メモリ→④Hooks）に従う |
+| `invoices/` | 読み取らせる請求書PDFを置く場所（受講生に頼まれたらここへコピーしてあげる） |
+| `requirements.txt` | 必要なライブラリの一覧（`pip install -r requirements.txt`） |
+| `.claude/skills/setup/` | 手順書（SKILL.md）＋ `freee_auth.py`（freee認証。token.json はキット直下にできる） |
+| `.claude/skills/jido-kicho/` | 手順書＋ `auto_keiri.py`（体験①：自動記帳）＋ `rules.csv`（第1段階のルール表。cp932/Excel編集可） |
+| `.claude/skills/invoice-ocr/` | 手順書＋ `invoice_ocr.py`（体験②：請求書OCR） |
+| `.claude/` の skills 以外 | **第1回の配布資料**（Claude Codeセットアップ4点セット）。このキットとは別の話なので、案内するときは `.claude/README.md` の順番（①md→②セキュリティ→③メモリ→④Hooks）に従う |
 | `勘定科目ルール.md` | 第3回の配布資料。勘定科目ルール表のひな形（freee・マネーフォワード両対応） |
 | `MF会計MCPセットアップガイド.md` | 第3回の配布資料。MF会計の公式MCPをClaude Codeに接続する手順（MF派の受講生向け） |
 
-結果ファイル（result.csv / invoice_result.csv）も `scripts/` 内に保存されます。
+結果ファイル（result.csv / invoice_result.csv）は、受講生が見つけやすいようキットの一番上のフォルダに保存されます。

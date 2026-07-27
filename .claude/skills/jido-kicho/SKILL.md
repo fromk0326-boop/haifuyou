@@ -15,12 +15,12 @@ description: >-
 キットの一番上のフォルダを作業場所にして：
 
 ```
-python scripts/auto_keiri.py
+python .claude/skills/jido-kicho/auto_keiri.py
 ```
 
 - 未処理の出金明細を最大5件取得し、2段階（rules.csv → AI）で仕分けして一覧表示する
 - この段階では**何も登録されない**ことを受講生に伝えて安心してもらう
-- 結果は `scripts/result.csv` にも保存される（Excelで開ける）
+- 結果はキット直下の `result.csv` にも保存される（Excelで開ける）
 
 ### 2. 結果を一緒に読む
 
@@ -37,7 +37,7 @@ python scripts/auto_keiri.py
 受講生が「この明細は登録してよい」と**明細IDを特定して承認した場合のみ**：
 
 ```
-python scripts/auto_keiri.py --register --ids 123,456
+python .claude/skills/jido-kicho/auto_keiri.py --register --ids 123,456
 ```
 
 - 承認されていないIDを勝手に足さない
@@ -51,4 +51,4 @@ freeeには消込APIがないため、登録しても「自動で経理」画面
 ## 応用（余裕がある受講生向け）
 
 - `--limit 3` で件数変更
-- `scripts/rules.csv` をExcelで開いて、自社によく出るキーワードを追加してもらう（「ルールを育てるほど速く・安く・正確になる」体験）
+- `.claude/skills/jido-kicho/rules.csv` をExcelで開いて、自社によく出るキーワードを追加してもらう（「ルールを育てるほど速く・安く・正確になる」体験）
