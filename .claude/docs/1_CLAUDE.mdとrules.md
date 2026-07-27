@@ -15,12 +15,14 @@
 ├── docs/1_CLAUDE.mdとrules.md  ← いまこれ。置き場所の説明書
 ├── CLAUDE.md.template          ← 「この案件・この事務所のルール」を書く指示書
 └── rules/
-    ├── persona.md              ← AI の名前・性格・口調（キャラ設定）
-    └── context7.md             ← 「ライブラリは最新ドキュメントを見てね」ルール
+    ├── persona.md.template     ← AI の名前・性格・口調（キャラ設定）
+    └── context7.md.template    ← 「ライブラリは最新ドキュメントを見てね」ルール
 ```
 
-> `CLAUDE.md.template` は、コピーしたあとに **`CLAUDE.md` へリネーム**して使います。
-> （キットの中で `.template` を付けてあるのは、このキット自身のルールと混ざらないようにするためです）
+> **どのファイルも、コピーしたあとに末尾の `.template` を外してリネーム**して使います。
+> （`CLAUDE.md.template` → `CLAUDE.md`、`persona.md.template` → `persona.md`）
+>
+> キットの中で `.template` を付けてあるのは、**書き換える前の空欄だらけのひな形が、このキットを開いたときのルールとして読み込まれてしまうのを防ぐため**です。中身が `<AI に付けたい名前>` のままでは、Claude が困ってしまいますからね。
 
 ファイルは2種類あります。役割が違うので、置く場所も違います。
 
@@ -40,7 +42,7 @@
 ### ① グローバルルール（`rules/` フォルダの中身）
 
 すべての作業で自動的に読み込まれる、いわば「常時オン」の設定です。
-下のフォルダに `persona.md` と `context7.md` をコピーしてください。
+下のフォルダに `persona.md.template` と `context7.md.template` をコピーし、**末尾の `.template` を外して** `persona.md` / `context7.md` にリネームしてください。
 
 **Windows の場合**
 ```
