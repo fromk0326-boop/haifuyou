@@ -32,7 +32,8 @@
 |----|------|-----------|
 | **第1回** Claude Codeセットアップ4点セット | `.claude/` | `.claude/README.md`（①md→②セキュリティ→③メモリ→④Hooks の順番を守る） |
 | **第3回** freeeオート経理（体験版） | `第3回_freeeオート経理/` | `第3回_freeeオート経理/README.md` |
-| **第4回** Chrome拡張2種 | `第4回_Chrome拡張/` | `第4回_Chrome拡張/README.md` と各サブフォルダのREADME |
+| **第4回** Chrome拡張 | `第4回_Chrome拡張/` | `第4回_Chrome拡張/README.md` と `mf-bulk-select-extension/README.md` |
+| **追加配布** freee勘定科目ボタン | `追加配布/freee-kamoku-buttons/` | `追加配布/freee-kamoku-buttons/README.md` |
 
 キット全体の入口・入手方法・Pythonの準備は、このフォルダの `README.md` にあります。
 
@@ -59,7 +60,8 @@
 | `.claude/` の skills 以外 | **第1回の配布資料**（Claude Codeセットアップ4点セット） |
 | `.claude/skills/` | **第3回のスキル**（手順書＋プログラム本体。下記） |
 | `第3回_freeeオート経理/` | 第3回の資料と作業フォルダ |
-| `第4回_Chrome拡張/` | 第4回の配布資料（Chrome拡張2種） |
+| `第4回_Chrome拡張/` | 第4回の配布資料（Chrome拡張：MF会計アシスト） |
+| `追加配布/` | 継続アップデート中の配布物（Chrome拡張：freee勘定科目ボタン）。**このフォルダを読み込み続けるため、消したり移動したりしないでください** |
 
 `.claude/skills/` の中身：
 
