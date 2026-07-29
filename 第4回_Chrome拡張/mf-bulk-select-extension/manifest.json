@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "MF会計アシスト（ルール一括選択・科目ボタン・何費？）",
   "description": "連携サービスから入力ページで、①自動仕訳ルール一致明細の一括チェック、②よく使う勘定科目のワンクリック選択パネル、③勘定科目辞典「これ、何費？」検索を提供する。",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "permissions": ["storage"],
   "content_scripts": [
     {

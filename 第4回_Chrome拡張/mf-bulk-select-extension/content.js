@@ -281,15 +281,44 @@
     setStatus('チェックを解除しました');
   }
 
-  function injectBar() {
-    if (document.getElementById(BAR_ID)) return;
-    // 「一括登録」ボタンの近くに置く
-    const bulkBtn = [...document.querySelectorAll('button, input[type="submit"], a')].find(
+  const BAR_BASE_CSS =
+    'display:inline-flex;align-items:center;gap:8px;margin-left:16px;font-size:13px;max-width:720px;';
+
+  function findBulkBtn() {
+    return [...document.querySelectorAll('button, input[type="submit"], a')].find(
       (e) => (e.textContent || e.value || '').trim() === '一括登録'
     );
+  }
+
+  // 「一括登録」の隣（inline）が本来の置き場所。見つからない間だけfixedのフォールバック。
+  // フォールバックを右上に置くとMFの「自動ルール」ボタン等に被ってクリックを塞ぐため、
+  // 操作系が少ない左下に置き、「一括登録」が描画され次第inlineへ移動する。
+  function placeBar(bar, bulkBtn) {
+    if (bulkBtn && bulkBtn.parentElement) {
+      bar.style.cssText = BAR_BASE_CSS;
+      bar.dataset.placement = 'inline';
+      bulkBtn.parentElement.appendChild(bar);
+    } else {
+      bar.style.cssText =
+        BAR_BASE_CSS +
+        'position:fixed;bottom:20px;left:20px;z-index:9999;background:#fff;padding:8px 12px;border:1px solid #ccc;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.15);margin-left:0;';
+      bar.dataset.placement = 'fallback';
+      document.body.appendChild(bar);
+    }
+  }
+
+  function injectBar() {
+    const bulkBtn = findBulkBtn();
+    const existing = document.getElementById(BAR_ID);
+    if (existing) {
+      // フォールバック表示中に「一括登録」が現れたら隣へ移す
+      if (existing.dataset.placement === 'fallback' && bulkBtn && bulkBtn.parentElement) {
+        placeBar(existing, bulkBtn);
+      }
+      return;
+    }
     const bar = document.createElement('span');
     bar.id = BAR_ID;
-    bar.style.cssText = 'display:inline-flex;align-items:center;gap:8px;margin-left:16px;font-size:13px;max-width:720px;';
 
     const selectBtn = document.createElement('button');
     selectBtn.id = BAR_ID + '-select';
@@ -311,20 +340,14 @@
     status.style.cssText = 'color:#2c67c8;line-height:1.3;';
 
     bar.append(selectBtn, clearBtn, status);
-
-    if (bulkBtn && bulkBtn.parentElement) {
-      bulkBtn.parentElement.appendChild(bar);
-    } else {
-      // フォールバック: 画面右上に固定表示
-      bar.style.cssText +=
-        'position:fixed;top:60px;right:20px;z-index:9999;background:#fff;padding:8px 12px;border:1px solid #ccc;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.15);';
-      document.body.appendChild(bar);
-    }
+    placeBar(bar, bulkBtn);
   }
 
-  // Reactの再レンダリングでバーが消えたら差し直す
+  // Reactの再レンダリングでバーが消えたら差し直す。
+  // フォールバック表示中は「一括登録」の出現も監視して定位置へ移す
   const observer = new MutationObserver(() => {
-    if (!document.getElementById(BAR_ID)) injectBar();
+    const bar = document.getElementById(BAR_ID);
+    if (!bar || bar.dataset.placement === 'fallback') injectBar();
   });
   observer.observe(document.body, { childList: true, subtree: true });
   injectBar();
