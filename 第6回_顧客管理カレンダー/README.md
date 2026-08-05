@@ -10,7 +10,7 @@
 |------|------|
 | 年間カレンダー | 決算期・申告・予定納税・源泉納付・年末調整を12ヶ月マトリクスで表示 |
 | タスク管理 | セルクリックで 未着手 → 完了 の切り替え。スポットタスクの追加も可能 |
-| 会計ソフト直行 | freee / マネーフォワード会計の該当事業所をボタン1つで開く |
+| 会計ソフト直行 | freee / マネーフォワード会計の該当事業所をボタン1つで開く（Tampermonkey併用で事業所の切り替えまで自動） |
 | e-Tax / eLTAX | ボタン1つで自動ログイン（ブラウザが起動してID・暗証番号を入力） |
 | チャット直リンク | 顧問先ごとの連絡チャンネル（Slack・Chatwork等）を記憶してワンクリックで開く |
 | Notion同期（任意） | Notionの顧問先DBから顧問先データを自動生成 |
@@ -51,6 +51,42 @@ Claude Codeに「第6回の顧客管理カレンダーを起動して」と頼�
 
 `index.html` 内の `MF_CTI_MAP` に cti（事業者切替トークン）を書きます。cti は `accounting.moneyforward.com/offices` の切替リンクのURLから取れます。
 
+### 事業所まで自動で切り替える（Tampermonkey・任意）
+
+上の設定だけだと、freee / MF のボタンで開くのは「事業所を選ぶ一覧ページ」までで、最後の切り替えクリックは手動です。ここを自動化するのが Tampermonkey（タンパーモンキー）という無料のChrome拡張です。
+
+仕組み：カレンダーのボタンは、URLに「どの顧問先を開きたいか」の目印（freeeは `target_client_id`、MFは `target_cti`）を付けて一覧ページを開くだけです。Tampermonkeyに登録したスクリプトがその目印を読み取って、該当事業所への切り替えを代行します。目印を読むのはこのスクリプトだけなので、入れなくても壊れることはありません（手動で選ぶだけ）。
+
+#### 1. Tampermonkey を入れる（取得方法）
+
+1. Chromeウェブストアで「Tampermonkey」を検索して「Chromeに追加」を押します。直リンク: https://chromewebstore.google.com/detail/dhdgffkkebhmkfjojejmpbldmpobfkfo
+2. アドレスバーに `chrome://extensions` と入力して拡張機能の画面を開き、右上の「デベロッパーモード」をオンにします（最近のChromeは、これをオンにしないとスクリプトが動きません）
+3. Edgeの方も同じ流れで使えます（EdgeアドオンストアにもTampermonkeyがあります）
+
+#### 2. スクリプトを登録する（設定方法）
+
+このフォルダの `tampermonkey/` に2本入っています。使う会計ソフトの分だけ登録すればOKです。
+
+| ファイル | 対象 | はたらき |
+|---------|------|---------|
+| `tampermonkey/freee-switch.user.js` | freee（認定アドバイザー向け） | `cm.secure.freee.co.jp` で該当顧問先へ自動切替 → freee本体を開く |
+| `tampermonkey/mf-switch.user.js` | MF会計 | `/offices` で該当事業者の切替リンクを自動クリック |
+
+登録は2本とも同じ手順です。
+
+1. ブラウザ右上のTampermonkeyアイコン →「ダッシュボード」を開きます
+2. 「＋」タブ（新規スクリプトを作成）を押します
+3. もとから入っているひな形を全部消して、上の `.user.js` ファイルの中身を丸ごと貼り付けます（ファイルはメモ帳で開くか、Claude Codeに「中身を表示して」と頼んでコピー）
+4. `Ctrl + S`（Macは `Cmd + S`）で保存します
+
+#### 3. 動作確認と前提
+
+カレンダーの freee / MF ボタンを押して、該当事業所の画面まで自動で進めば成功です。
+
+- freeeの自動切替は、freee認定アドバイザーの顧問先管理画面（`cm.secure.freee.co.jp`）を使っていて、`FREEE_CM_IDS` を設定済みの場合に働きます。未設定の顧問先は今までどおりfreeeトップが開きます
+- MFの自動切替は `MF_CTI_MAP` の設定が前提です
+- freee / MF の画面の作りが変わると動かなくなることがあります。その場合はスクリプトをClaude Codeに見せて「動かなくなったので直して」と頼んでください
+
 ### Googleカレンダー サイドバー
 
 画面右のサイドバーに自分のGoogleカレンダーを表示できます。`index.html` 内の `YOUR_CALENDAR_ID%40gmail.com` を自分のカレンダーID（通常はGmailアドレスの `@` を `%40` にしたもの）に差し替えてください。使わない場合は × で閉じられます。
@@ -85,6 +121,7 @@ Claude Codeに「第6回の顧客管理カレンダーを起動して」と頼�
 | `calendar-tasks.json` / `chat-urls.json` | タスク状態・チャットURLの保存先（自動作成。git管理外） |
 | `generate.py` | Notion同期（任意） |
 | `etax_login.py` / `eltax_login.py` | e-Tax / eLTAX 自動ログイン（Playwright使用） |
+| `tampermonkey/*.user.js` | freee / MF会計の事業所自動切替スクリプト（任意。Tampermonkeyに登録して使う） |
 | `tax-credentials.sample.json` | 暗証番号ファイルのひな形 |
 | `.env.example` | Notion同期の設定ひな形 |
 
