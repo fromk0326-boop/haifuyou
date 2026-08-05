@@ -1,36 +1,52 @@
 // ==UserScript==
 // @name         顧客管理カレンダー：MF会計 事業者自動切替
 // @namespace    https://github.com/fromk0326-boop/haifuyou
-// @version      1.0.0
+// @version      1.4
 // @description  カレンダーのMFボタンから accounting.moneyforward.com/offices を開いたとき、URLの target_cti を読んで該当事業者の切替リンクを自動クリックする
 // @match        https://accounting.moneyforward.com/offices*
-// @run-at       document-idle
 // @grant        none
+// @run-at       document-start
 // ==/UserScript==
 
-(function () {
+(function() {
   'use strict';
 
-  // カレンダーのボタンが付けてくる目印。無ければ何もしない（普通に開いただけのとき）
-  const targetCti = new URLSearchParams(location.search).get('target_cti');
+  const params = new URLSearchParams(window.location.search);
+  const targetCti = params.get('target_cti');
   if (!targetCti) return;
 
-  // 事業者一覧の切替リンク（hrefにctiが入っている）を探してクリックする
-  function clickSwitchLink() {
-    const link = Array.from(document.querySelectorAll('a')).find(
-      (a) => (a.getAttribute('href') || '').includes(targetCti)
-    );
-    if (link) {
-      link.click();
-      return true;
+  window.confirm = () => true;
+
+  function tryClick() {
+    // data-method="patch" が正しいセレクター（putではない）
+    const links = document.querySelectorAll('a[data-method="patch"]');
+    for (const link of links) {
+      const href = link.getAttribute('href') || '';
+      if (href.includes('tid=' + targetCti)) {
+        console.log('[MF] 切替実行:', link.textContent.trim());
+        link.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, view: window}));
+        observer.disconnect();
+        return true;
+      }
     }
     return false;
   }
 
-  // 一覧の読み込みを待ちながら15秒までリンクを探す。見つからなければ手動で選ぶ
-  if (clickSwitchLink()) return;
-  const deadline = Date.now() + 15000;
-  const timer = setInterval(() => {
-    if (clickSwitchLink() || Date.now() > deadline) clearInterval(timer);
-  }, 500);
+  const observer = new MutationObserver(() => {
+    tryClick();
+  });
+
+  observer.observe(document.documentElement, {childList: true, subtree: true});
+
+  // ページロード後にも一度試みる
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', tryClick);
+  } else {
+    tryClick();
+  }
+
+  setTimeout(() => {
+    observer.disconnect();
+    console.log('[MF] タイムアウト');
+  }, 10000);
 })();
