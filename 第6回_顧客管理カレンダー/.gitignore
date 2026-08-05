@@ -1,0 +1,21 @@
+# ここから下は受講生ごとのデータ。コミットしない（教材の更新取り込みでも書き換わらない）
+data.json
+calendar-tasks.json
+chat-urls.json
+
+# 認証情報（絶対にコミットしない。読み取り・画面表示も禁止）
+tax-credentials.json
+.env
+
+# Notion同期の生成物・ログ（顧問先名を含むためコミットしない）
+clients/
+sync.log
+meetings.json
+meetings-cache.json
+relation_suggestions.json
+freee_unprocessed.json
+temp/
+
+# Python
+__pycache__/
+*.pyc

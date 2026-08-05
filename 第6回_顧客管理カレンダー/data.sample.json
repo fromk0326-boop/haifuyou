@@ -1,0 +1,184 @@
+{
+  "generated_at": "2026-08-05",
+  "has_more": false,
+  "next_cursor": null,
+  "clients": [
+    {
+      "id": "aaaaaaa1-0000-4000-8000-000000000001",
+      "name": "サンプル商事",
+      "formal_name": "株式会社サンプル商事",
+      "fiscal_month": 3,
+      "category": "法人",
+      "status": "進行中",
+      "annual_fee": 600000,
+      "software": "freee",
+      "address": "東京都千代田区丸の内１－１－１",
+      "representative": "見本太郎",
+      "etax_id": "1234567890123456",
+      "taxnote_id": null,
+      "eltax_id": "abc12345678",
+      "tasks": [
+        {
+          "id": "aaaaaaa1-kessan_mark-3",
+          "title": "決算期",
+          "month": 3,
+          "type": "kessan_mark",
+          "color": "#1a56db",
+          "status": "todo",
+          "note": ""
+        },
+        {
+          "id": "aaaaaaa1-kessan-5",
+          "title": "申告（法人税・地方税・消費税）",
+          "month": 5,
+          "type": "kessan",
+          "color": "#93c5fd",
+          "status": "todo",
+          "note": ""
+        },
+        {
+          "id": "aaaaaaa1-yotei-9",
+          "title": "予定納税（中間申告）",
+          "month": 9,
+          "type": "yotei",
+          "color": "#16a34a",
+          "status": "todo",
+          "note": ""
+        },
+        {
+          "id": "aaaaaaa1-gensen-1",
+          "title": "源泉所得税納付",
+          "month": 1,
+          "type": "gensen",
+          "color": "#fb923c",
+          "status": "todo",
+          "note": ""
+        },
+        {
+          "id": "aaaaaaa1-gensen-7",
+          "title": "源泉所得税納付",
+          "month": 7,
+          "type": "gensen",
+          "color": "#fb923c",
+          "status": "todo",
+          "note": ""
+        },
+        {
+          "id": "aaaaaaa1-nencho-12",
+          "title": "年末調整",
+          "month": 12,
+          "type": "nencho",
+          "color": "purple",
+          "status": "todo",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "id": "aaaaaaa2-0000-4000-8000-000000000002",
+      "name": "デモテック",
+      "formal_name": "株式会社デモテック",
+      "fiscal_month": 9,
+      "category": "法人",
+      "status": "未着手",
+      "annual_fee": 480000,
+      "software": "MF",
+      "address": "大阪府大阪市北区梅田２－２－２",
+      "representative": "試作花子",
+      "etax_id": null,
+      "taxnote_id": null,
+      "eltax_id": null,
+      "tasks": [
+        {
+          "id": "aaaaaaa2-kessan_mark-9",
+          "title": "決算期",
+          "month": 9,
+          "type": "kessan_mark",
+          "color": "#1a56db",
+          "status": "todo",
+          "note": ""
+        },
+        {
+          "id": "aaaaaaa2-kessan-11",
+          "title": "申告（法人税・地方税・消費税）",
+          "month": 11,
+          "type": "kessan",
+          "color": "#93c5fd",
+          "status": "todo",
+          "note": ""
+        },
+        {
+          "id": "aaaaaaa2-yotei-3",
+          "title": "予定納税（中間申告）",
+          "month": 3,
+          "type": "yotei",
+          "color": "#16a34a",
+          "status": "todo",
+          "note": ""
+        },
+        {
+          "id": "aaaaaaa2-gensen-1",
+          "title": "源泉所得税納付",
+          "month": 1,
+          "type": "gensen",
+          "color": "#fb923c",
+          "status": "todo",
+          "note": ""
+        },
+        {
+          "id": "aaaaaaa2-gensen-7",
+          "title": "源泉所得税納付",
+          "month": 7,
+          "type": "gensen",
+          "color": "#fb923c",
+          "status": "todo",
+          "note": ""
+        },
+        {
+          "id": "aaaaaaa2-nencho-12",
+          "title": "年末調整",
+          "month": 12,
+          "type": "nencho",
+          "color": "purple",
+          "status": "todo",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "id": "aaaaaaa3-0000-4000-8000-000000000003",
+      "name": "見本一郎",
+      "formal_name": "見本一郎",
+      "fiscal_month": 12,
+      "category": "個人",
+      "status": "未着手",
+      "annual_fee": 240000,
+      "software": "freee",
+      "address": null,
+      "representative": null,
+      "etax_id": null,
+      "taxnote_id": null,
+      "eltax_id": null,
+      "tasks": [
+        {
+          "id": "aaaaaaa3-kessan_mark-12",
+          "title": "決算期",
+          "month": 12,
+          "type": "kessan_mark",
+          "color": "#1a56db",
+          "status": "todo",
+          "note": ""
+        },
+        {
+          "id": "aaaaaaa3-kessan-3",
+          "title": "確定申告（所得税・消費税）",
+          "month": 3,
+          "type": "kessan",
+          "color": "#93c5fd",
+          "status": "todo",
+          "note": ""
+        }
+      ]
+    }
+  ]
+}
