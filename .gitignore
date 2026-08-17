@@ -16,3 +16,7 @@ invoice_result.csv
 
 # セキュリティひな形のsetup.shが生成する、パス置換済みの設定断片
 .claude/settings.security.merged.json
+
+# 第7回の業務ログ（自分の業務内容を含むためGitHubに上げない。.gitkeepは残す）
+業務ログ/*
+!業務ログ/.gitkeep
