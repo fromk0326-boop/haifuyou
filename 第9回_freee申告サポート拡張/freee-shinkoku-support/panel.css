@@ -1,0 +1,372 @@
+/* freee申告サポートボタン — モノトーン基調＋青アクセント（design.md準拠・最小14px） */
+
+#fss-root {
+  --fss-fg: #1a202c;
+  --fss-bg: #ffffff;
+  --fss-border: #d0d5dd;
+  --fss-muted: #5f6b7a;
+  --fss-accent: #2b6cb0;
+  --fss-warn-bg: #f1f3f5;
+  font-family: "Meiryo UI", Meiryo, "Hiragino Sans", sans-serif;
+  font-size: 14px;
+  color: var(--fss-fg);
+}
+
+/* ---- ツールバー ---- */
+#fss-root .fss-toolbar {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147483600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--fss-bg);
+  border: 1px solid var(--fss-border);
+  border-radius: 999px;
+  padding: 6px 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+#fss-root .fss-toolbar-logo {
+  font-size: 16px;
+}
+
+#fss-root .fss-tbtn {
+  border: 1px solid var(--fss-border);
+  background: var(--fss-bg);
+  color: var(--fss-fg);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+#fss-root .fss-tbtn:hover {
+  border-color: var(--fss-accent);
+  color: var(--fss-accent);
+}
+
+#fss-root .fss-tbtn-dev {
+  padding: 5px 8px;
+  color: var(--fss-muted);
+}
+
+/* ---- パネル ---- */
+#fss-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 720px;
+  max-width: 95vw;
+  z-index: 2147483601;
+  background: var(--fss-bg);
+  border-left: 1px solid var(--fss-border);
+  box-shadow: -6px 0 24px rgba(0, 0, 0, 0.16);
+  display: flex;
+  flex-direction: column;
+}
+
+#fss-panel .fss-resize {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: ew-resize;
+  z-index: 1;
+}
+
+#fss-panel .fss-resize:hover {
+  background: var(--fss-accent);
+  opacity: 0.35;
+}
+
+#fss-panel .fss-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--fss-border);
+}
+
+#fss-panel .fss-panel-title {
+  font-weight: bold;
+  font-size: 15px;
+}
+
+#fss-panel .fss-close {
+  border: none;
+  background: none;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--fss-muted);
+}
+
+#fss-panel .fss-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 12px 0;
+  border-bottom: 1px solid var(--fss-border);
+}
+
+#fss-panel .fss-tab {
+  border: 1px solid var(--fss-border);
+  border-bottom: none;
+  background: #f4f5f7;
+  color: var(--fss-muted);
+  border-radius: 6px 6px 0 0;
+  padding: 6px 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#fss-panel .fss-tab-active {
+  background: var(--fss-bg);
+  color: var(--fss-accent);
+  font-weight: bold;
+  position: relative;
+  top: 1px;
+}
+
+#fss-panel .fss-panel-body {
+  padding: 14px 16px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ---- 部品 ---- */
+#fss-panel .fss-note {
+  color: var(--fss-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 8px 0;
+}
+
+#fss-panel .fss-summary {
+  font-weight: bold;
+  margin: 10px 0 6px;
+}
+
+#fss-panel .fss-h3 {
+  font-size: 14px;
+  font-weight: bold;
+  margin: 16px 0 4px;
+  padding-left: 8px;
+  border-left: 3px solid var(--fss-accent);
+}
+
+#fss-panel .fss-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 8px 0;
+  flex-wrap: wrap;
+}
+
+#fss-panel .fss-btn {
+  border: 1px solid var(--fss-border);
+  background: var(--fss-bg);
+  color: var(--fss-fg);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#fss-panel .fss-btn:hover {
+  border-color: var(--fss-accent);
+}
+
+#fss-panel .fss-btn-primary {
+  background: var(--fss-accent);
+  border-color: var(--fss-accent);
+  color: #ffffff;
+}
+
+#fss-panel .fss-input {
+  border: 1px solid var(--fss-border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 14px;
+  flex: 1;
+  min-width: 120px;
+  background: var(--fss-bg);
+  color: var(--fss-fg);
+}
+
+#fss-panel .fss-field {
+  margin: 8px 0;
+}
+
+#fss-panel .fss-field label {
+  display: block;
+  font-size: 14px;
+  color: var(--fss-muted);
+  margin-bottom: 2px;
+}
+
+#fss-panel .fss-num-input {
+  width: 100%;
+  text-align: right;
+}
+
+#fss-panel .fss-table-wrap {
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+#fss-panel .fss-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+}
+
+#fss-panel .fss-table th,
+#fss-panel .fss-table td {
+  border: 1px solid var(--fss-border);
+  padding: 5px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+#fss-panel .fss-table th {
+  background: #f4f5f7;
+  font-weight: bold;
+}
+
+/* td.fss-num にしないと上の「.fss-table td は左揃え」に詳細度で負ける */
+#fss-panel .fss-num,
+#fss-panel .fss-table td.fss-num,
+#fss-panel .fss-table th.fss-num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+#fss-panel .fss-warn {
+  background: var(--fss-warn-bg);
+  font-weight: bold;
+}
+
+#fss-panel .fss-total td {
+  font-weight: bold;
+  border-top: 2px solid var(--fss-fg);
+}
+
+#fss-panel .fss-findings {
+  margin: 6px 0;
+  padding-left: 4px;
+  list-style: none;
+}
+
+/* ---- 前年比較の「見立て（推測）」列と要確認バッジ（⚠アラートは赤字ルール） ---- */
+#fss-panel .fss-see {
+  color: var(--fss-muted);
+  min-width: 180px;
+}
+
+#fss-panel .fss-alert-badge {
+  color: #c0392b;
+  font-weight: bold;
+  margin-right: 6px;
+  white-space: nowrap;
+}
+
+#fss-panel .fss-findings li {
+  margin: 6px 0;
+  padding-left: 10px;
+  border-left: 3px solid var(--fss-muted);
+  line-height: 1.5;
+}
+
+/* ---- インラインボタン（freee画面の既存ボタン列に並べる。#fss-root外なので色は直書き） ---- */
+#fss-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 12px;
+  vertical-align: middle;
+  font-family: "Meiryo UI", Meiryo, "Hiragino Sans", sans-serif;
+}
+
+#fss-inline .fss-inline-logo {
+  font-size: 14px;
+  line-height: 1;
+}
+
+#fss-inline .fss-inline-btn {
+  border: 1px solid #d0d5dd;
+  background: #ffffff;
+  color: #1a202c;
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+#fss-inline .fss-inline-btn:hover {
+  border-color: #2b6cb0;
+  color: #2b6cb0;
+}
+
+#fss-inline .fss-inline-dev {
+  padding: 5px 8px;
+  color: #5f6b7a;
+}
+
+/* ---- トースト通知（読み取り完了の合図） ---- */
+#fss-root #fss-toasts {
+  position: fixed;
+  right: 16px;
+  bottom: 70px;
+  z-index: 2147483602;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+#fss-root .fss-toast {
+  background: #1a202c;
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 360px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.25s, transform 0.25s;
+}
+
+#fss-root .fss-toast-show {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---- 手動比較の折りたたみ ---- */
+#fss-panel .fss-manual {
+  margin-top: 14px;
+  border-top: 1px solid var(--fss-border);
+  padding-top: 10px;
+}
+
+#fss-panel .fss-manual > summary {
+  cursor: pointer;
+  color: var(--fss-muted);
+  font-size: 14px;
+  user-select: none;
+}
+
+#fss-panel .fss-manual[open] > summary {
+  margin-bottom: 8px;
+  color: var(--fss-fg);
+}

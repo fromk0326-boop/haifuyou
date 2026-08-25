@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "freee申告サポートボタン",
+  "version": "0.4.2",
+  "description": "freee申告（法人税・消費税）の画面内ボタン列に「前年比較」「予定納税試算」を追加します。法人税・消費税とも内部API（GETのみ）で申告データを自動取得。読み取り専用で、freeeへの書き込みは行いません。",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://secure.freee.co.jp/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://secure.freee.co.jp/ctax/*"
+      ],
+      "js": [
+        "capture.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://secure.freee.co.jp/ctax/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "panel.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
