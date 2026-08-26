@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "freee人事労務 年調一覧表ボタン",
+  "version": "0.4.1",
+  "description": "freee人事労務の年末調整画面に「年調一覧表」ボタンを追加し、freee申告の年末調整データ一覧表ふうの一覧をCSV出力します。内部API（GETのみ）の観測とページ読み取りだけで動作し、freeeへの書き込み・外部への送信は一切行いません。",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://p.secure.freee.co.jp/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://p.secure.freee.co.jp/*"
+      ],
+      "js": [
+        "capture.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://p.secure.freee.co.jp/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "panel.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

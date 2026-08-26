@@ -1,0 +1,372 @@
+/* freee申告サポートボタン — モノトーン基調＋青アクセント（design.md準拠・最小14px） */
+
+#fnl-root {
+  --fnl-fg: #1a202c;
+  --fnl-bg: #ffffff;
+  --fnl-border: #d0d5dd;
+  --fnl-muted: #5f6b7a;
+  --fnl-accent: #2b6cb0;
+  --fnl-warn-bg: #f1f3f5;
+  font-family: "Meiryo UI", Meiryo, "Hiragino Sans", sans-serif;
+  font-size: 14px;
+  color: var(--fnl-fg);
+}
+
+/* ---- ツールバー ---- */
+#fnl-root .fnl-toolbar {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147483600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--fnl-bg);
+  border: 1px solid var(--fnl-border);
+  border-radius: 999px;
+  padding: 6px 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+#fnl-root .fnl-toolbar-logo {
+  font-size: 16px;
+}
+
+#fnl-root .fnl-tbtn {
+  border: 1px solid var(--fnl-border);
+  background: var(--fnl-bg);
+  color: var(--fnl-fg);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+#fnl-root .fnl-tbtn:hover {
+  border-color: var(--fnl-accent);
+  color: var(--fnl-accent);
+}
+
+#fnl-root .fnl-tbtn-dev {
+  padding: 5px 8px;
+  color: var(--fnl-muted);
+}
+
+/* ---- パネル ---- */
+#fnl-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 720px;
+  max-width: 95vw;
+  z-index: 2147483601;
+  background: var(--fnl-bg);
+  border-left: 1px solid var(--fnl-border);
+  box-shadow: -6px 0 24px rgba(0, 0, 0, 0.16);
+  display: flex;
+  flex-direction: column;
+}
+
+#fnl-panel .fnl-resize {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: ew-resize;
+  z-index: 1;
+}
+
+#fnl-panel .fnl-resize:hover {
+  background: var(--fnl-accent);
+  opacity: 0.35;
+}
+
+#fnl-panel .fnl-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--fnl-border);
+}
+
+#fnl-panel .fnl-panel-title {
+  font-weight: bold;
+  font-size: 15px;
+}
+
+#fnl-panel .fnl-close {
+  border: none;
+  background: none;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--fnl-muted);
+}
+
+#fnl-panel .fnl-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 12px 0;
+  border-bottom: 1px solid var(--fnl-border);
+}
+
+#fnl-panel .fnl-tab {
+  border: 1px solid var(--fnl-border);
+  border-bottom: none;
+  background: #f4f5f7;
+  color: var(--fnl-muted);
+  border-radius: 6px 6px 0 0;
+  padding: 6px 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#fnl-panel .fnl-tab-active {
+  background: var(--fnl-bg);
+  color: var(--fnl-accent);
+  font-weight: bold;
+  position: relative;
+  top: 1px;
+}
+
+#fnl-panel .fnl-panel-body {
+  padding: 14px 16px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ---- 部品 ---- */
+#fnl-panel .fnl-note {
+  color: var(--fnl-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 8px 0;
+}
+
+#fnl-panel .fnl-summary {
+  font-weight: bold;
+  margin: 10px 0 6px;
+}
+
+#fnl-panel .fnl-h3 {
+  font-size: 14px;
+  font-weight: bold;
+  margin: 16px 0 4px;
+  padding-left: 8px;
+  border-left: 3px solid var(--fnl-accent);
+}
+
+#fnl-panel .fnl-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 8px 0;
+  flex-wrap: wrap;
+}
+
+#fnl-panel .fnl-btn {
+  border: 1px solid var(--fnl-border);
+  background: var(--fnl-bg);
+  color: var(--fnl-fg);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#fnl-panel .fnl-btn:hover {
+  border-color: var(--fnl-accent);
+}
+
+#fnl-panel .fnl-btn-primary {
+  background: var(--fnl-accent);
+  border-color: var(--fnl-accent);
+  color: #ffffff;
+}
+
+#fnl-panel .fnl-input {
+  border: 1px solid var(--fnl-border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 14px;
+  flex: 1;
+  min-width: 120px;
+  background: var(--fnl-bg);
+  color: var(--fnl-fg);
+}
+
+#fnl-panel .fnl-field {
+  margin: 8px 0;
+}
+
+#fnl-panel .fnl-field label {
+  display: block;
+  font-size: 14px;
+  color: var(--fnl-muted);
+  margin-bottom: 2px;
+}
+
+#fnl-panel .fnl-num-input {
+  width: 100%;
+  text-align: right;
+}
+
+#fnl-panel .fnl-table-wrap {
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+#fnl-panel .fnl-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+}
+
+#fnl-panel .fnl-table th,
+#fnl-panel .fnl-table td {
+  border: 1px solid var(--fnl-border);
+  padding: 5px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+#fnl-panel .fnl-table th {
+  background: #f4f5f7;
+  font-weight: bold;
+}
+
+/* td.fnl-num にしないと上の「.fnl-table td は左揃え」に詳細度で負ける */
+#fnl-panel .fnl-num,
+#fnl-panel .fnl-table td.fnl-num,
+#fnl-panel .fnl-table th.fnl-num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+#fnl-panel .fnl-warn {
+  background: var(--fnl-warn-bg);
+  font-weight: bold;
+}
+
+#fnl-panel .fnl-total td {
+  font-weight: bold;
+  border-top: 2px solid var(--fnl-fg);
+}
+
+#fnl-panel .fnl-findings {
+  margin: 6px 0;
+  padding-left: 4px;
+  list-style: none;
+}
+
+/* ---- 前年比較の「見立て（推測）」列と要確認バッジ（⚠アラートは赤字ルール） ---- */
+#fnl-panel .fnl-see {
+  color: var(--fnl-muted);
+  min-width: 180px;
+}
+
+#fnl-panel .fnl-alert-badge {
+  color: #c0392b;
+  font-weight: bold;
+  margin-right: 6px;
+  white-space: nowrap;
+}
+
+#fnl-panel .fnl-findings li {
+  margin: 6px 0;
+  padding-left: 10px;
+  border-left: 3px solid var(--fnl-muted);
+  line-height: 1.5;
+}
+
+/* ---- インラインボタン（freee画面の既存ボタン列に並べる。#fnl-root外なので色は直書き） ---- */
+#fnl-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 12px;
+  vertical-align: middle;
+  font-family: "Meiryo UI", Meiryo, "Hiragino Sans", sans-serif;
+}
+
+#fnl-inline .fnl-inline-logo {
+  font-size: 14px;
+  line-height: 1;
+}
+
+#fnl-inline .fnl-inline-btn {
+  border: 1px solid #d0d5dd;
+  background: #ffffff;
+  color: #1a202c;
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+#fnl-inline .fnl-inline-btn:hover {
+  border-color: #2b6cb0;
+  color: #2b6cb0;
+}
+
+#fnl-inline .fnl-inline-dev {
+  padding: 5px 8px;
+  color: #5f6b7a;
+}
+
+/* ---- トースト通知（読み取り完了の合図） ---- */
+#fnl-root #fnl-toasts {
+  position: fixed;
+  right: 16px;
+  bottom: 70px;
+  z-index: 2147483602;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+#fnl-root .fnl-toast {
+  background: #1a202c;
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 360px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.25s, transform 0.25s;
+}
+
+#fnl-root .fnl-toast-show {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---- 手動比較の折りたたみ ---- */
+#fnl-panel .fnl-manual {
+  margin-top: 14px;
+  border-top: 1px solid var(--fnl-border);
+  padding-top: 10px;
+}
+
+#fnl-panel .fnl-manual > summary {
+  cursor: pointer;
+  color: var(--fnl-muted);
+  font-size: 14px;
+  user-select: none;
+}
+
+#fnl-panel .fnl-manual[open] > summary {
+  margin-bottom: 8px;
+  color: var(--fnl-fg);
+}
