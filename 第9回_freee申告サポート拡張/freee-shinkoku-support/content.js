@@ -368,15 +368,19 @@
   }
 
   // 法人税の有効帳票コード一覧。realtime_schema_errors が有効帳票のぶんだけ返るのを利用する。
-  // 比較対象は別表類（1xxxxxxx）と地方税様式（2xxxxxxxx）のみ。内訳書・納付書・概況書・委任状は除外
+  // v0.4.5: 概況書・勘定科目内訳明細書も比較したいので（けんとさん指示）コード範囲では絞らず全帳票を返す。
+  // 納付書・委任状だけは取得後にタイトルで除外する（isNonCompareSheetTitle）
   function fetchCorpSheetCodes(ctaxReturnId) {
     return apiGet(apiBase(CORP) + 'realtime_schema_errors', ctaxReturnId).then(function (d) {
       var arr = Array.isArray(d) ? d : ((d && d.realtime_schema_errors) || []);
-      return arr.map(function (x) { return x && x.sheet_code; }).filter(function (c) {
-        var n = Number(c);
-        return (n >= 10000000 && n < 100000000) || (n >= 200000000 && n < 300000000);
-      });
+      return arr.map(function (x) { return x && x.sheet_code; }).filter(Boolean)
+        .sort(function (a, b) { return Number(a) - Number(b); }); // 別表→地方税→その他の順
     });
+  }
+
+  // 比較する意味がない帳票（納付書・委任状類）。タイトルが取れた時点で判定する
+  function isNonCompareSheetTitle(t) {
+    return /納付書|委任状|税理士法/.test(String(t || ''));
   }
 
   // 法人税の項目定義（itemKey→def）。ページをまたいで1つのマップへ統合する。ラベル表示専用
@@ -634,6 +638,23 @@
     return Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24 * 30.4));
   }
 
+  // 'YYYY-MM-DD' に mヶ月＋d日 を足す（応当日が無い月は月末に丸める）。返り値も 'YYYY-MM-DD'
+  // 例: shiftDate('2026-03-31', 0, 1)='2026-04-01'（来期開始）、shiftDate('2026-04-01', 8, -1)='2026-11-30'（中間の申告納付期限）
+  function shiftDate(iso, addM, addD) {
+    var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return null;
+    var base = new Date(Number(m[1]), Number(m[2]) - 1 + (addM || 0), 1);
+    var last = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+    base.setDate(Math.min(Number(m[3]), last));
+    if (addD) base.setDate(base.getDate() + addD);
+    return base.getFullYear() + '-' + ('0' + (base.getMonth() + 1)).slice(-2) + '-' + ('0' + base.getDate()).slice(-2);
+  }
+
+  function jpDate(iso) {
+    var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? Number(m[1]) + '年' + Number(m[2]) + '月' + Number(m[3]) + '日' : String(iso || '');
+  }
+
   function describeTaxMethod(method) {
     var map = {
       full_deduction: '本則課税（全額控除）',
@@ -802,6 +823,441 @@
     });
   }
 
+  // 既知の法人税帳票コード→名称（2026-08-26の実キャプチャで確認できたものだけ。それ以外はコード表示）
+  var CORP_SHEET_NAMES = {
+    '10100100': '別表一',
+    '10040200': '別表四',
+    '10050100': '別表五(一)',
+    '10050200': '別表五(二)',
+    '206000000': '第六号様式'
+  };
+
+  /* 帳票の有無チェック（v0.4.3・2026-08-26 けんとさん指示）
+   * 前期に作った帳票（特に法人税の別表）が当期に無い＝作成漏れの疑いを検出する。
+   * 前期の帳票一覧は「前期IDでの一覧APIの試行（freee側が弾いたら無視）」＋
+   * 「受動キャプチャ済みスナップショット」の和集合から作る */
+  function renderSheetExistenceCheck(div, kind, prior, priorPeriod, sheetInfos, snaps) {
+    var apiPriorPromise;
+    if (kind === CORP) {
+      apiPriorPromise = fetchCorpSheetCodes(prior.id).then(function (codes) {
+        return codes.map(function (c) { return { code: c, title: '' }; });
+      });
+    } else {
+      apiPriorPromise = fetchSheetList(prior.id).then(function (sheets) {
+        return sheets.map(function (s) {
+          return {
+            code: s.sheet_code || (s.sheet_master && s.sheet_master.sheet_code),
+            title: (s.sheet_master && (s.sheet_master.title || s.sheet_master.name)) || ''
+          };
+        });
+      });
+    }
+    apiPriorPromise.catch(function () { return []; }).then(function (apiPrior) {
+      apiPrior = (apiPrior || []).filter(function (s) { return s.code; });
+      var apiListOk = apiPrior.length > 0;
+
+      var priorInfo = {};
+      apiPrior.forEach(function (s) { priorInfo[String(s.code)] = s.title || ''; });
+      snaps.forEach(function (x) {
+        if (x.taxKind !== kind || x.period !== priorPeriod) return;
+        var c = String(x.sheetCode);
+        if (isNonCompareSheetTitle(x.sheetTitle || x.sheetName)) return; // 納付書・委任状は有無を問わない
+        if (!(c in priorInfo) || !priorInfo[c]) priorInfo[c] = x.sheetTitle || x.sheetName || priorInfo[c] || '';
+      });
+
+      var priorCodes = Object.keys(priorInfo);
+      if (priorCodes.length === 0) return; // 前期の帳票一覧が手元にない（前期を一度も開いていない）→判定しない
+
+      var curSet = {};
+      sheetInfos.forEach(function (s) { curSet[String(s.code)] = true; });
+      var missing = priorCodes.filter(function (c) { return !curSet[c]; });
+      var added = sheetInfos.map(function (s) { return String(s.code); }).filter(function (c) { return !(c in priorInfo); });
+
+      var word = (kind === CORP) ? '別表' : '帳票';
+      div.appendChild(el('h3', { class: 'fss-h3', text: word + 'の有無チェック（前期 ' + priorCodes.length + ' 件 ⇔ 当期 ' + sheetInfos.length + ' 件）' }));
+      var ul = el('ul', { class: 'fss-findings' });
+      if (missing.length === 0) {
+        ul.appendChild(el('li', { text: '✓ 前期に作った' + word + 'はすべて当期にもあるよ' }));
+      } else {
+        missing.forEach(function (c) {
+          var name = priorInfo[c] || CORP_SHEET_NAMES[c] || (word + 'コード ' + c);
+          var li = el('li', {});
+          li.appendChild(el('span', { class: 'fss-alert-badge', text: '⚠ 要確認' }));
+          li.appendChild(el('span', { text: name + ': 前期にはあるのに当期に作られていないよ。作成漏れじゃないか確認してね' }));
+          ul.appendChild(li);
+        });
+      }
+      added.forEach(function (c) {
+        var s = sheetInfos.filter(function (x) { return String(x.code) === c; })[0];
+        var name = (s && s.title) || CORP_SHEET_NAMES[c] || (word + 'コード ' + c);
+        ul.appendChild(el('li', { text: name + ': 当期から新しく作成された' + word + 'だよ' }));
+      });
+      div.appendChild(ul);
+      if (!apiListOk) {
+        div.appendChild(note('前期の' + word + '一覧は保存済みデータからの推定だよ。前期の年度切替で開いていない' + word + 'は判定に含まれないから、網羅チェックは前期を一度ひととおり開いてからが確実。'));
+      }
+    });
+  }
+
+  /* ===================== 法人基礎データ照合（v0.4.4・イチサンフォームAPI） =====================
+   * データ元は国税庁法人番号公表サイト系（法人番号株式会社の無料API）。
+   * この拡張で唯一の外部送信で、api.ichisan.jp へ社名または法人番号の文字列だけをGETで送る
+   * （backgroundが中継。金額・申告データは送らない。2026-08-26 けんとさん承認）。
+   * 取れるのは商号・所在地・郵便番号・法人番号・インボイス登録番号・従業員数まで。
+   * 資本金・株主構成・役員は法人番号データに無いため照合できない（前年比較の変遷ビュー側で確認） */
+
+  function ichisanSend(msg) {
+    return new Promise(function (resolve, reject) {
+      chrome.runtime.sendMessage(Object.assign({ type: 'fss-ichisan' }, msg), function (res) {
+        if (chrome.runtime.lastError) { reject(new Error(chrome.runtime.lastError.message)); return; }
+        if (!res || !res.ok) { reject(new Error((res && res.error) || 'fetch failed')); return; }
+        resolve(res.data);
+      });
+    });
+  }
+
+  function ichisanSearch(name) {
+    return ichisanSend({ mode: 'search', name: name });
+  }
+
+  // 項目別エンドポイントはプレーンテキスト1値で返る（実測）。空・None・メンテナンス中はデータなし扱い
+  function ichisanField(field, id) {
+    return ichisanSend({ mode: 'field', field: field, id: id }).then(function (t) {
+      t = String(t == null ? '' : t).trim();
+      if (!t || t === 'None' || t === 'メンテナンス中') return '';
+      return t;
+    }).catch(function () { return ''; });
+  }
+
+  function ichisanDetail(number) {
+    var id = digitsOf(number);
+    if (id.length !== 13) return Promise.resolve(null);
+    return Promise.all([
+      ichisanField('company_name_half', id),
+      ichisanField('location_full', id),
+      ichisanField('invoice_id', id),
+      ichisanField('employee_num', id)
+    ]).then(function (rr) {
+      if (!rr[0] && !rr[1] && !rr[2] && !rr[3]) return null;
+      return {
+        company_name_half: rr[0],
+        location_full: rr[1],
+        invoice_id: rr[2],
+        employee_num: rr[3],
+        corporate_number: id
+      };
+    });
+  }
+
+  function digitsOf(s) {
+    return String(s == null ? '' : s).replace(/[^0-9０-９]/g, '').replace(/[０-９]/g, function (ch) {
+      return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
+    });
+  }
+
+  // 全角英数字→半角（toHalfWidthは数字・記号だけなので、商号照合用に英字も潰す）
+  function toHalfAlnum(s) {
+    return toHalfWidth(String(s || '')).replace(/[Ａ-Ｚａ-ｚ]/g, function (ch) {
+      return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
+    });
+  }
+
+  // 商号の表記ゆれ吸収（全角英数→半角・空白除去・㈱等の展開）
+  function normCorpName(s) {
+    return toHalfAlnum(String(s || ''))
+      .replace(/[\s　]+/g, '')
+      .replace(/㈱/g, '株式会社')
+      .replace(/㈲/g, '有限会社')
+      .replace(/㈾/g, '合資会社')
+      .replace(/㈴/g, '合名会社')
+      .toLowerCase();
+  }
+
+  // 「一丁目」等の漢数字（〜九十九）を算用数字へ
+  function kanjiNumToArabic(m) {
+    var map = { '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9 };
+    if (m === '十') return '10';
+    var t = m.indexOf('十');
+    if (t < 0) return String(map[m] || m);
+    var tens = (t === 0) ? 1 : (map[m[0]] || 0);
+    var ones = (t === m.length - 1) ? 0 : (map[m[m.length - 1]] || 0);
+    return String(tens * 10 + ones);
+  }
+
+  // 住所の表記ゆれ吸収（丁目・番地・号の表記差を両側で同じ形に潰して比べる）
+  function normAddr(s) {
+    var t = toHalfAlnum(String(s || '')).replace(/[\s　]+/g, '');
+    t = t.replace(/[一二三四五六七八九十]+(?=丁目)/g, kanjiNumToArabic);
+    t = t.replace(/丁目|番地の|番地|番|号/g, '-');
+    t = t.replace(/[‐‑‒–—―−ｰー]/g, '-');
+    t = t.replace(/-+/g, '-').replace(/-$/, '');
+    return t;
+  }
+
+  // 申告書スナップショットから法人基礎データ（法人名・納税地・法人番号・登録番号）を拾う
+  function extractBasicInfo(snap) {
+    var info = { name: '', address: '', number: '', invoice: '' };
+    var numParts = [];
+    ((snap && snap.items) || []).forEach(function (it) {
+      var lb = it.label || '';
+      var v = String(it.v || '').trim();
+      if (!lb || !v) return;
+      if (/法人番号/.test(lb)) { numParts.push(v); return; }
+      if (/登録番号|適格請求書/.test(lb)) {
+        if (!info.invoice && digitsOf(v).length === 13) info.invoice = v;
+        return;
+      }
+      if (/電話|ﾌﾘｶﾞﾅ|フリガナ|ふりがな|カナ|kana/i.test(lb)) return;
+      if (/納税地|所在地/.test(lb)) { if (v.length > info.address.length) info.address = v; return; }
+      if (/法人名|名称/.test(lb)) { if (v.length > info.name.length) info.name = v; return; }
+    });
+    // 13桁まるごとの欄を優先。1桁ずつのマス目形式なら連結して13桁を拾う
+    for (var i = 0; i < numParts.length; i++) {
+      var d = digitsOf(numParts[i]);
+      if (d.length === 13) { info.number = d; break; }
+    }
+    if (!info.number) {
+      var joined = digitsOf(numParts.join(''));
+      if (joined.length >= 13) info.number = joined.slice(0, 13);
+    }
+    return info;
+  }
+
+  // 基礎データを読む代表帳票: 法人税=別表一（10100100）/ 消費税=申告書第一表
+  function findBaseSheet(kind, sheetInfos) {
+    var re = (kind === CORP) ? /別表一/ : /第一表/;
+    var hit = null;
+    (sheetInfos || []).forEach(function (s) {
+      if (!hit && re.test(s.title || '')) hit = s;
+    });
+    if (!hit && kind === CORP) {
+      (sheetInfos || []).forEach(function (s) {
+        if (!hit && String(s.code) === '10100100') hit = s;
+      });
+      if (!hit) hit = { code: '10100100', title: '別表一' };
+    }
+    return hit;
+  }
+
+  function fetchBasicInfo(kind, curId, sheetInfos) {
+    var base = findBaseSheet(kind, sheetInfos);
+    if (!base) return Promise.reject(new Error('基礎データを読む帳票（別表一／第一表）が見つからないよ'));
+    var defsPromise = (kind === CORP) ? fetchCorpDefs(base.code, curId) : Promise.resolve(null);
+    return Promise.all([apiGet(apiBase(kind) + 'sheets/' + base.code, curId), defsPromise]).then(function (rr) {
+      var snap = (kind === CORP) ? parseCorpSheetApi(rr[0], base.code) : parseSheetApi(rr[0], base.code);
+      if (!snap) throw new Error('帳票データを読み取れなかったよ');
+      if (rr[1]) fillCorpLabels(snap, rr[1]);
+      return extractBasicInfo(snap);
+    });
+  }
+
+  function renderIchisanSection(container, kind, curId, sheetInfos) {
+    container.appendChild(el('h3', { class: 'fss-h3', text: '法人基礎データ照合（国税庁 法人番号データ）' }));
+    container.appendChild(note('申告書の法人名・納税地・法人番号・インボイス登録を、国税庁法人番号公表サイト系の無料API（イチサンフォーム）と照合するよ。ボタンを押すと api.ichisan.jp へ社名（または法人番号）だけを送信する。金額・申告データは送らないよ。※資本金・株主構成はこのデータに無いから、上の「税率・基本情報の変遷」で前年と見比べてね。'));
+    var row = el('div', { class: 'fss-row' });
+    var out = el('div');
+    var btn = el('button', { class: 'fss-btn', text: '📇 登記データと照合する', onclick: run });
+    row.appendChild(btn);
+    container.appendChild(row);
+    container.appendChild(out);
+
+    function run() {
+      btn.disabled = true;
+      out.textContent = '';
+      out.appendChild(note('申告書の基礎データを読み取り中…'));
+      fetchBasicInfo(kind, curId, sheetInfos).then(function (info) {
+        if (!info.number && !info.name) throw new Error('この申告書から法人名・法人番号を読み取れなかったよ');
+        if (info.number) {
+          return ichisanDetail(info.number).then(function (d) {
+            renderIchisanResult(out, kind, info, d, info.number);
+          });
+        }
+        return ichisanSearch(info.name).then(function (list) {
+          list = Array.isArray(list) ? list : [];
+          var nn = normCorpName(info.name);
+          var hits = list.filter(function (c) { return normCorpName(c && c.name) === nn; });
+          var pick = (hits.length === 1) ? hits[0] : (list.length === 1 ? list[0] : null);
+          if (pick && pick.corporate_number) {
+            return ichisanDetail(pick.corporate_number).then(function (d) {
+              renderIchisanResult(out, kind, info, d || pick, pick.corporate_number);
+            });
+          }
+          renderIchisanCandidates(out, kind, info, list);
+        });
+      }).catch(function (e) {
+        out.textContent = '';
+        out.appendChild(note('照合できなかったよ: ' + ((e && e.message) || e)));
+      }).then(function () { btn.disabled = false; });
+    }
+  }
+
+  function renderIchisanCandidates(out, kind, info, list) {
+    out.textContent = '';
+    if (list.length === 0) {
+      out.appendChild(note('「' + info.name + '」で法人番号データに候補が見つからなかったよ。商号変更が公表データに未反映か、表記が大きく違う可能性があるよ。'));
+      return;
+    }
+    out.appendChild(note('同名・類似の法人が複数見つかったよ。所在地で見分けて、該当するものを選んでね。'));
+    var wrap = el('div', { class: 'fss-table-wrap' });
+    var table = el('table', { class: 'fss-table' });
+    table.appendChild(el('tr', {}, [
+      el('th', { text: '商号' }), el('th', { text: '所在地' }), el('th', { text: '法人番号' }), el('th', { text: '' })
+    ]));
+    list.slice(0, 10).forEach(function (c) {
+      if (!c) return;
+      var td = el('td');
+      td.appendChild(el('button', {
+        class: 'fss-btn', text: 'この法人で照合',
+        onclick: function () {
+          out.textContent = '';
+          out.appendChild(note('取得中…'));
+          ichisanDetail(c.corporate_number).then(function (d) {
+            renderIchisanResult(out, kind, info, d || c, c.corporate_number);
+          }).catch(function () {
+            out.textContent = '';
+            out.appendChild(note('詳細を取得できなかったよ。'));
+          });
+        }
+      }));
+      table.appendChild(el('tr', {}, [
+        el('td', { text: c.name || '' }),
+        el('td', { text: c.location || '' }),
+        el('td', { text: c.corporate_number || '' }),
+        td
+      ]));
+    });
+    wrap.appendChild(table);
+    out.appendChild(wrap);
+    if (list.length > 10) out.appendChild(note('候補が多いから先頭10件だけ表示してるよ。'));
+  }
+
+  function renderIchisanResult(out, kind, info, d, corpNumber) {
+    out.textContent = '';
+    if (!d) {
+      out.appendChild(note('法人番号データ側の情報を取得できなかったよ。法人番号 ' + (corpNumber || '不明') + ' が公表データに無い可能性があるから、番号の記載ミスも疑ってみてね。'));
+      return;
+    }
+    var regName = d.name || d.company_name || d.company_name_half || '';
+    var regAddr = d.location_full || d.location || '';
+    var regNum = digitsOf(d.corporate_number || corpNumber || '');
+    var regInvoice = digitsOf(d.invoice_id || '');
+    var taxInv = digitsOf(info.invoice);
+    var alerts = 0;
+
+    var wrap = el('div', { class: 'fss-table-wrap' });
+    var table = el('table', { class: 'fss-table' });
+    table.appendChild(el('tr', {}, [
+      el('th', { text: '項目' }), el('th', { text: '申告書' }), el('th', { text: '法人番号データ' }), el('th', { text: '判定' })
+    ]));
+
+    function addRow(label, taxV, regV, judge) {
+      var jtd = el('td');
+      if (judge.alert) {
+        alerts++;
+        jtd.appendChild(el('span', { class: 'fss-alert-badge', text: '⚠要確認' }));
+      }
+      jtd.appendChild(document.createTextNode(judge.text));
+      table.appendChild(el('tr', judge.alert ? { class: 'fss-warn' } : {}, [
+        el('td', { text: label }),
+        el('td', { text: taxV || '（読み取れず）' }),
+        el('td', { text: regV || '（データなし）' }),
+        jtd
+      ]));
+    }
+
+    if (info.number && regNum) {
+      addRow('法人番号', info.number, regNum, (info.number === regNum)
+        ? { text: '✓ 一致' }
+        : { text: '法人番号が違うよ。申告書の記載ミスか、別法人と照合してないか確認してね', alert: true });
+    } else {
+      addRow('法人番号', info.number, regNum, { text: '片方しか無いから参考表示だよ' });
+    }
+
+    if (info.name && regName) {
+      var names = [d.name, d.company_name, d.company_name_half].map(normCorpName).filter(Boolean);
+      addRow('商号（法人名）', info.name, regName, (names.indexOf(normCorpName(info.name)) >= 0)
+        ? { text: '✓ 一致' }
+        : { text: '商号が違うよ。商号変更の反映漏れ（申告書側 or 公表データ側）か、表記ゆれか確認してね', alert: true });
+    } else {
+      addRow('商号（法人名）', info.name, regName, { text: '片方しか無いから照合できないよ' });
+    }
+
+    if (info.address && regAddr) {
+      var a = normAddr(info.address);
+      var b = normAddr(regAddr);
+      var judge;
+      if (a === b) judge = { text: '✓ 一致' };
+      else if (a.indexOf(b) === 0 || b.indexOf(a) === 0) judge = { text: '✓ ほぼ一致（建物名など表記の差だけ）' };
+      else judge = { text: '所在地が違うよ。本社移転の反映漏れ（申告書側 or 異動届・登記側）か確認してね', alert: true };
+      addRow('納税地／本店所在地', info.address, regAddr, judge);
+    } else {
+      addRow('納税地／本店所在地', info.address, regAddr, { text: '片方しか無いから照合できないよ' });
+    }
+
+    if (taxInv && regInvoice) {
+      addRow('インボイス登録番号', 'T' + taxInv, 'T' + regInvoice, (taxInv === regInvoice)
+        ? { text: '✓ 一致' }
+        : { text: '登録番号が違うよ。記載ミスか確認してね', alert: true });
+    } else if (taxInv && !regInvoice) {
+      addRow('インボイス登録番号', 'T' + taxInv, '', { text: '申告書に登録番号があるのに公表データでは未登録だよ。登録の取消・失効がないか確認してね', alert: true });
+    } else if (regInvoice) {
+      addRow('インボイス登録番号', '', 'T' + regInvoice, { text: '登録あり（適格請求書発行事業者）。下の課税/免税チェックも見てね' });
+    } else {
+      addRow('インボイス登録番号', '', '', { text: '未登録。下の課税/免税チェックも見てね' });
+    }
+
+    if (d.employee_num) {
+      addRow('従業員数（参考）', '', String(d.employee_num), { text: '参考情報だよ（照合対象外）' });
+    }
+
+    wrap.appendChild(table);
+    out.appendChild(wrap);
+
+    var invDiv = el('div');
+    out.appendChild(invDiv);
+    renderInvoiceConsistency(invDiv, kind, regInvoice, taxInv);
+
+    out.appendChild(note((alerts ? '⚠が' + alerts + '件あるよ。' : '基礎データはぜんぶ整合してたよ。') + '国税庁データは反映にタイムラグがあって正確性の保証も無いから、⚠は「即エラー」じゃなくて確認事項として見てね。'));
+  }
+
+  /* インボイス登録の有無 × 消費税申告の有無の整合（2026-08-26 けんとさん指示）
+   * 登録あり＝課税事業者のはず、を突き合わせる。課税/免税の最終判定はしない（確認事項として出す） */
+  function renderInvoiceConsistency(div, kind, regInvoice, taxInv) {
+    div.appendChild(el('h3', { class: 'fss-h3', text: 'インボイス登録 × 課税/免税の整合' }));
+    var slot = el('div');
+    div.appendChild(slot);
+    slot.appendChild(note('freee申告の消費税申告の有無を確認中…'));
+
+    var consPromise = (kind === CONS)
+      ? Promise.resolve(true)
+      : fetchCurrentReturnK(CONS).then(function (r) { return !!(r && r.id); }).catch(function () { return false; });
+
+    consPromise.then(function (hasCons) {
+      slot.textContent = '';
+      var ul = el('ul', { class: 'fss-findings' });
+      function li(text, alert) {
+        var item = el('li');
+        if (alert) item.appendChild(el('span', { class: 'fss-alert-badge', text: '⚠要確認' }));
+        item.appendChild(document.createTextNode(text));
+        ul.appendChild(item);
+      }
+      var hasReg = !!(regInvoice || taxInv);
+      if (hasReg && hasCons) {
+        li('インボイス登録あり × 消費税申告あり。課税事業者として整合してるよ。');
+      } else if (hasReg && !hasCons) {
+        li('インボイス登録あり（＝課税事業者のはず）なのに、freee申告にこの事業所の消費税申告が見当たらないよ。消費税申告の作成漏れか、別ソフト・別税理士で申告してないか確認してね。', true);
+      } else if (!hasReg && hasCons) {
+        li('インボイス未登録だけど消費税申告はあるよ。登録なしの課税事業者（基準期間の課税売上高1,000万円超など）なら整合。インボイス登録したつもりなら、公表データに反映されてないか確認してね。');
+      } else {
+        li('インボイス未登録 × 消費税申告なし。免税事業者として整合してるよ（免税でいいか＝基準期間・特定期間の判定は、けんとさんの最終確認ね）。');
+      }
+      slot.appendChild(ul);
+      if (kind === CORP) {
+        slot.appendChild(note('消費税申告の有無は、freee申告でいま選択中の消費税申告データから見てるよ。期ズレの可能性があるときは年度も確認してね。'));
+      }
+    });
+  }
+
   // 指定税目でのAPI比較を試す。データが無ければrejectして呼び出し側が次の税目へ進む
   function runCompareApi(kind, apiArea) {
     return Promise.all([fetchCurrentReturnK(kind), fetchReturnsListK(kind)]).then(function (res) {
@@ -829,6 +1285,11 @@
       text: kindLabel + '申告の前年比較（内部API）: 当期 ' + curPeriod + (prior ? ' ⇔ 前期 ' + priorPeriod : '')
     }));
 
+    // v0.4.4: 法人基礎データ照合（前期が無い初年度でも使えるので早期returnより前に置く）
+    var ichisanDiv = el('div');
+    apiArea.appendChild(ichisanDiv);
+    renderIchisanSection(ichisanDiv, kind, cur.id, sheetInfos);
+
     if (!prior) {
       apiArea.appendChild(note('freee申告に前期（' + curPeriod + ' より前）の申告書が見つからなかったよ。初年度はここまで！'));
       return;
@@ -842,7 +1303,13 @@
       }
     }
 
+    // v0.4.3: 帳票の有無チェック（特に法人税: 前期に作った別表が当期に無い＝作成漏れの疑い）。
+    // 前期の帳票一覧は「受動キャプチャ済みスナップショット」＋「前期IDでの一覧APIの試行（通らなければ無視）」から作る
+    var sheetCheckDiv = el('div');
+    apiArea.appendChild(sheetCheckDiv);
+
     loadApiSnaps(function (snaps) {
+      renderSheetExistenceCheck(sheetCheckDiv, kind, prior, priorPeriod, sheetInfos, snaps);
       sheetInfos.forEach(function (s) {
         var code = s.code;
         var sec = el('div');
@@ -859,6 +1326,11 @@
           var curSnap = (kind === CORP) ? parseCorpSheetApi(rr[0], code) : parseSheetApi(rr[0], code);
           var defsMap = rr[1];
           if (!curSnap || curSnap.items.length === 0) throw new Error('empty');
+          // 納付書・委任状は前年比較の意味がないので、タイトルが分かった時点でセクションごと消す
+          if (isNonCompareSheetTitle(curSnap.sheetTitle || curSnap.sheetName)) {
+            if (sec.parentNode) sec.parentNode.removeChild(sec);
+            return null;
+          }
           if (!curSnap.period) curSnap.period = curPeriod;
           curSnap.source = 'active';
           saveApiSnap(curSnap); // 当期分も保存 → 来期の前年比較にそのまま使える
@@ -876,6 +1348,7 @@
             return { prev: prev, cur: curSnap };
           });
         }).then(function (pair) {
+          if (!pair) return; // 対象外帳票でセクションを消したケース
           slot.textContent = '';
           if (!pair.prev) {
             slot.appendChild(note('前期のこの帳票のデータがまだ手元にないよ。freee申告の年度切替で前期を開いて、この帳票を一度表示すると自動保存されて、次からはボタン1発で比較できるよ。'));
@@ -1017,11 +1490,31 @@
     });
   }
 
+  /* 繰越整合の共通ヘルパー（見立て列と繰越整合チェックで同じ正規化・同じ突合を使う） */
+  function rollBaseOf(lb) {
+    return String(lb || '').replace(/差引翌期首現在|翌期首現在|期首現在|期末現在/g, '').replace(/\s+/g, '');
+  }
+
+  // 前期スナップショットから「項目名（期首/期末表記を除去）→ 前期末残高」のマップを作る。
+  // 同名が複数ある項目は突合が曖昧になるので null にして対象外
+  function buildPrevEndMap(prevSnap) {
+    var map = {};
+    (prevSnap && prevSnap.items || []).forEach(function (it) {
+      var lb = it.label || '';
+      if (it.n == null || !/翌期首現在|期末現在/.test(lb)) return;
+      var b = rollBaseOf(lb);
+      map[b] = (map[b] === undefined) ? it.n : null;
+    });
+    return map;
+  }
+
   /* 増減理由の推測（v0.4.1・ルールベース）。
    * 変化パターン（新規発生/消滅/符号反転/大幅増減）と項目ラベルの性質、
    * 課税標準・所得金額との増減率の連動から「見立て」を1行生成する。
+   * v0.4.3: 繰越系の期首残高は汎用文言でなく、前期末残高との突合結果
+   * （一致なら「問題なし」まで言い切る）を表示する（2026-08-26 けんとさん指示）。
    * あくまで機械的な推測なので、結果は必ず「確認事項」扱い（税務判断はしない）。 */
-  function explainDiff(m, baseRate, baseLabel) {
+  function explainDiff(m, baseRate, baseLabel, prevEndMap) {
     var label = String(m.cur.label || m.prev.label || m.k);
     var p = m.prev.n, c = m.cur.n;
     var d = (p != null && c != null) ? c - p : null;
@@ -1045,9 +1538,22 @@
     }
 
     // 項目の性質（ラベルの正規表現で推測）
-    if (/期首|期末|繰越|翌期/.test(label)) {
-      // 繰越系は期首同士・期末同士の年度間比較の情報価値が低い。整合は下の繰越整合チェックで見る
-      reasons.push('繰越系。年度間の増減より繰越整合（前期末↔当期期首）で確認');
+    if (/期首現在/.test(label) && !/翌期首/.test(label)) {
+      // 期首残高は前期末残高と直接突合して、一致なら「問題なし」まで言い切る
+      var pe = prevEndMap ? prevEndMap[rollBaseOf(label)] : undefined;
+      if (pe !== undefined && pe !== null && c != null) {
+        if (pe === c) {
+          return { text: '前期末残高 ' + fmt(pe) + ' と一致してるから繰越は問題なし', alert: false };
+        }
+        reasons.push('前期末残高 ' + fmt(pe) + ' と不一致（差 ' + fmt(c - pe) + '）。繰越の転記を確認');
+        alert = true;
+      } else {
+        reasons.push('期首残高。前期末残高との一致は下の繰越整合チェックで確認');
+        alert = (p !== 0 && c === 0) || (p != null && c != null && (p > 0) !== (c > 0));
+      }
+    } else if (/期首|期末|繰越|翌期/.test(label)) {
+      // 期末残高等の年度間増減は当期の異動（繰入・取崩等）の結果。大小比較の情報価値は低い
+      reasons.push('繰越系の残高。増減は当期の異動の結果（繰越の整合は下の繰越整合チェックで確認）');
       alert = (p !== 0 && c === 0) || (p != null && c != null && (p > 0) !== (c > 0));
     } else if (/中間|予定/.test(label)) {
       reasons.push('前期の確定税額に連動して毎年変わる項目');
@@ -1075,12 +1581,30 @@
   function renderCompareResult(area, prev, cur) {
     area.textContent = '';
 
+    // 内訳書（勘定科目内訳明細書）は相手先別に横串が組めた行の金額増減だけ出す。
+    // 行位置ベースの項目比較は別の相手先同士を並べた無意味な表になるため一切出さない
+    // （2026-08-26 けんとさん指示「取引先別に横串で並べられないなら、無意味に内訳は書かないでいい」）
+    if (/内訳/.test((cur.sheetTitle || '') + (cur.sheetName || '') + (prev.sheetTitle || '') + (prev.sheetName || ''))) {
+      var hadRows = renderDetailRowsCompare(area, prev, cur);
+      if (!hadRows) {
+        area.appendChild(note('この内訳書は相手先別に横串で並べられない形式だったから、明細の比較は省略したよ（内訳書の種類ごとの有無は「帳票の有無チェック」で見てね）。'));
+      }
+      return;
+    }
+
+    // 明細行（キーが group[N]__item 形式）は行番号ベースだと並び替えでズレるので、
+    // 項目単位の突合から外して renderDetailRowsCompare で行単位にマッチングする（v0.4.5）
+    var hasRows = false;
     var prevMap = {};
-    prev.items.forEach(function (it) { prevMap[it.k] = it; });
+    prev.items.forEach(function (it) {
+      if (ROW_KEY_RE.test(it.k)) { hasRows = true; return; }
+      prevMap[it.k] = it;
+    });
 
     var matched = [];
     var curOnly = [];
     cur.items.forEach(function (it) {
+      if (ROW_KEY_RE.test(it.k)) { hasRows = true; return; }
       if (prevMap[it.k]) {
         matched.push({ k: it.k, prev: prevMap[it.k], cur: it });
         delete prevMap[it.k];
@@ -1104,7 +1628,10 @@
       }
     });
 
-    var rows = diffs.map(function (m) { return { m: m, ex: explainDiff(m, baseRate, baseLabel) }; });
+    // 繰越系の見立て用: 前期末残高（翌期首現在/期末現在）を項目名で引けるようにしておく
+    var prevEndMap = buildPrevEndMap(prev);
+
+    var rows = diffs.map(function (m) { return { m: m, ex: explainDiff(m, baseRate, baseLabel, prevEndMap) }; });
     var alertCount = rows.filter(function (r) { return r.ex.alert; }).length;
 
     var sum = el('p', { class: 'fss-summary', text: '一致した項目 ' + matched.length + ' 件（うち差異 ' + diffs.length + ' 件・同額 ' + sames + ' 件）／当期のみ ' + curOnly.length + ' 件／前年のみ ' + prevOnly.length + ' 件' });
@@ -1165,7 +1692,340 @@
     var lPrev = miniList('前年のみの項目 ⚠ 要確認（当期に無い＝計上漏れか課税方式変更の可能性）', prevOnly);
     if (lPrev) area.appendChild(lPrev);
 
+    if (hasRows) renderDetailRowsCompare(area, prev, cur);
+    renderTraceSection(area, prev, cur);
     renderRollforwardChecks(area, prev, cur);
+  }
+
+  /* 明細行の行単位比較（v0.4.5・2026-08-26 けんとさん指示「別表二の株主名・住所・株数／概況書／勘定科目内訳明細書を比較したい」）
+   * 別表二の株主明細・内訳書の取引先明細は行番号キー（group[N]__item）なので、
+   * 行が並び替わっただけで全項目が差異に見えてしまう。そこで
+   * 「氏名・名称系のテキスト項目」で前期・当期の行同士をマッチングし、
+   * 行の追加・消失・行内の値の変更（住所・株数・金額など）を行単位で報告する */
+  var ROW_KEY_RE = /^(.+?)\[(\d+)\]__(.+)$/;
+
+  function stripRowNoSuffix(label) {
+    return String(label || '').replace(/（\d+行目）$/, '');
+  }
+
+  // snap.items から {グループ名: [{idx, fields: {項目名: item}}...]} を作る（idx昇順）
+  function collectDetailRows(snap) {
+    var groups = {};
+    (snap.items || []).forEach(function (it) {
+      var m = it.k.match(ROW_KEY_RE);
+      if (!m) return;
+      var g = m[1];
+      var idx = Number(m[2]);
+      var G = groups[g] || (groups[g] = {});
+      var R = G[idx] || (G[idx] = {});
+      R[m[3]] = it;
+    });
+    var out = {};
+    Object.keys(groups).forEach(function (g) {
+      out[g] = Object.keys(groups[g]).map(Number).sort(function (a, b) { return a - b; })
+        .map(function (i) { return { idx: i, fields: groups[g][i] }; });
+    });
+    return out;
+  }
+
+  // 行のキーにする項目を選ぶ: ラベルが氏名・名称系 → だめならテキスト値が多い項目
+  function pickRowNameField(rows) {
+    var stats = {};
+    rows.forEach(function (r) {
+      Object.keys(r.fields).forEach(function (f) {
+        var it = r.fields[f];
+        var st = stats[f] || (stats[f] = { label: '', text: 0, count: 0 });
+        st.count++;
+        if (it.n == null && String(it.v || '').trim() !== '') st.text++;
+        if (!st.label && it.label) st.label = stripRowNoSuffix(it.label);
+      });
+    });
+    var keys = Object.keys(stats);
+    for (var i = 0; i < keys.length; i++) {
+      if (/氏名|名称|名前|銀行|支店|相手先|取引先/.test(stats[keys[i]].label)) return keys[i];
+    }
+    var best = null;
+    keys.forEach(function (f) {
+      var st = stats[f];
+      if (st.text > 0 && st.text >= st.count * 0.5 && !/住所|所在地|摘要|備考/.test(st.label)) {
+        if (!best || st.text > stats[best].text) best = f;
+      }
+    });
+    return best;
+  }
+
+  function renderDetailRowsCompare(area, prev, cur) {
+    // 内訳書（勘定科目内訳明細書）は「同じ相手先で横串が組めた行」の金額増減だけが分析対象
+    // （2026-08-26 けんとさん指示「取引先別に横串で並べられないなら、無意味に内訳は書かないでいい」）。
+    // 住所・摘要などテキスト項目の変更は表示せず、相手先の追加・消失も個別には並べない（件数だけ）
+    var isUchiwake = /内訳/.test((cur.sheetTitle || '') + (cur.sheetName || '') + (prev.sheetTitle || '') + (prev.sheetName || ''));
+    var prevG = collectDetailRows(prev);
+    var curG = collectDetailRows(cur);
+    var gset = {};
+    Object.keys(prevG).forEach(function (g) { gset[g] = true; });
+    Object.keys(curG).forEach(function (g) { gset[g] = true; });
+    var gnames = Object.keys(gset);
+    if (gnames.length === 0) return false;
+
+    var head = el('h3', { class: 'fss-h3', text: '明細行の突合（行単位・並び替え対応）' });
+    area.appendChild(head);
+    var alertTotal = 0;
+
+    gnames.forEach(function (g) {
+      var pr = prevG[g] || [];
+      var cr = curG[g] || [];
+      if (pr.length === 0 && cr.length === 0) return;
+
+      var nameField = pickRowNameField(pr.concat(cr));
+      var nameLabel = '';
+
+      // 表示用ラベル辞書（（N行目）を落としたもの）
+      var fieldLabels = {};
+      pr.concat(cr).forEach(function (r) {
+        Object.keys(r.fields).forEach(function (f) {
+          if (!fieldLabels[f] && r.fields[f].label) fieldLabels[f] = stripRowNoSuffix(r.fields[f].label);
+        });
+      });
+      if (nameField) nameLabel = fieldLabels[nameField] || nameField;
+      var groupTitle = nameLabel ? nameLabel + ' の明細' : '明細グループ ' + g;
+
+      // 種類ごとの有無比較: 明細がまるごと消えた/新設されたときは行別に出さず1行でまとめる
+      // （「当期は売掛金の内訳が抜けている」を先に言う。2026-08-26 けんとさん指示）
+      if (pr.length > 0 && cr.length === 0) {
+        var liGone = el('li', {});
+        liGone.appendChild(el('span', { class: 'fss-alert-badge', text: '⚠ 要確認' }));
+        liGone.appendChild(el('span', { text: groupTitle + ': 前期は ' + pr.length + ' 行あるのに当期は記載がないよ。作成漏れか確認してね' }));
+        alertTotal++;
+        area.appendChild(el('ul', { class: 'fss-findings' }, [liGone]));
+        return;
+      }
+      if (pr.length === 0 && cr.length > 0) {
+        area.appendChild(el('ul', { class: 'fss-findings' }, [
+          el('li', { text: groupTitle + ': 当期から新しく記載されたよ（' + cr.length + ' 行）' })
+        ]));
+        return;
+      }
+
+      // 内訳書で相手先名の項目が見つからないときは、行番号どうしの比較しかできない＝無意味なので省略
+      if (isUchiwake && !nameField) {
+        area.appendChild(note(groupTitle + ': 相手先名の項目が見つからなかったから、明細の比較は省略したよ（前期 ' + pr.length + ' 行・当期 ' + cr.length + ' 行）。'));
+        return;
+      }
+
+      function rowName(r) {
+        var it = nameField && r.fields[nameField];
+        return it && String(it.v || '').trim() ? String(it.v).trim() : (r.idx + '行目');
+      }
+      function sigOf(r) {
+        var it = nameField && r.fields[nameField];
+        var s = it ? normCorpName(it.v) : '';
+        if (!s && isUchiwake) return null; // 内訳書は相手先名で横串が組めない行を突合しない（行番号対応は無意味な比較になる）
+        return s || ('#' + r.idx); // 名前が取れない行は行番号で対応付け
+      }
+      function bySig(rows) {
+        var map = {};
+        var seen = {};
+        rows.forEach(function (r) {
+          var s = sigOf(r);
+          if (s == null) return;
+          var c = (seen[s] || 0) + 1;
+          seen[s] = c;
+          if (c > 1) s = s + '#' + c; // 同名行は出現順で対応付け
+          map[s] = r;
+        });
+        return map;
+      }
+      var pm = bySig(pr);
+      var cm = bySig(cr);
+
+      function dispVal(it) {
+        if (!it) return '（なし）';
+        var v = it.n != null ? fmt(it.n) : String(it.v || '').trim();
+        return v === '' ? '（空欄）' : v;
+      }
+
+      var sameCount = 0;
+      var matchedCount = 0;
+      var addCount = 0;
+      var goneCount = 0;
+      var items = []; // {alert, text}
+      Object.keys(cm).forEach(function (s) {
+        var c = cm[s];
+        var p = pm[s];
+        if (!p) {
+          if (isUchiwake) { addCount++; return; } // 内訳書は相手先の入れ替わりを個別には出さない
+          items.push({ alert: false, text: '「' + rowName(c) + '」: 当期から追加された行だよ' });
+          return;
+        }
+        delete pm[s];
+        matchedCount++;
+        var fset = {};
+        Object.keys(p.fields).forEach(function (f) { fset[f] = true; });
+        Object.keys(c.fields).forEach(function (f) { fset[f] = true; });
+        var changes = [];
+        Object.keys(fset).forEach(function (f) {
+          if (f === nameField) return; // 名前はマッチングに使ったので比較不要
+          var pi = p.fields[f];
+          var ci = c.fields[f];
+          var isNum = (pi && pi.n != null) || (ci && ci.n != null);
+          if (isUchiwake && !isNum) return; // 内訳書は金額の増減だけ見る（住所・摘要の変更はノイズ）
+          var pv = dispVal(pi);
+          var cv = dispVal(ci);
+          if (pv === cv) return;
+          var txt = (fieldLabels[f] || f) + ' ' + pv + ' → ' + cv;
+          if (pi && ci && pi.n != null && ci.n != null) {
+            var dd = ci.n - pi.n;
+            txt += '（' + (dd > 0 ? '+' : '') + fmt(dd) + '）';
+          }
+          changes.push(txt);
+        });
+        if (changes.length === 0) {
+          sameCount++;
+        } else {
+          items.push({ alert: false, strong: true, text: '「' + rowName(c) + '」: ' + changes.join('／') });
+        }
+      });
+      Object.keys(pm).forEach(function (s) {
+        if (isUchiwake) { goneCount++; return; } // 内訳書は相手先の入れ替わりを個別には出さない
+        items.push({ alert: true, text: '「' + rowName(pm[s]) + '」: 前期にあって当期に無い行だよ。記載漏れか異動（株主の変動等）か確認してね' });
+      });
+
+      // 内訳書で同じ相手先が1件も無いとき（相手先名の付け方が期をまたいで変わった等）は、
+      // 並べても増減分析にならないので1行のサマリーだけにする
+      if (isUchiwake && matchedCount === 0) {
+        area.appendChild(note(groupTitle + ': 前期 ' + pr.length + ' 行・当期 ' + cr.length + ' 行だけど、同じ相手先が見つからなかったから明細の比較は省略したよ。'));
+        return;
+      }
+
+      var title = isUchiwake
+        ? groupTitle + '（同じ相手先 ' + matchedCount + ' 件・うち金額増減 ' + items.length + ' 件）'
+        : groupTitle + '（前期 ' + pr.length + ' 行 ⇔ 当期 ' + cr.length + ' 行・変更 ' + items.length + ' 件）';
+      area.appendChild(el('p', { class: 'fss-summary', text: title }));
+      var ul = el('ul', { class: 'fss-findings' });
+      if (items.length === 0) {
+        ul.appendChild(el('li', { text: isUchiwake
+          ? '✓ 同じ相手先 ' + sameCount + ' 件、金額の増減はなかったよ'
+          : '✓ 全 ' + sameCount + ' 行、前期と一致してるよ' }));
+      } else {
+        if (sameCount > 0) ul.appendChild(el('li', { text: isUchiwake ? '✓ 増減なし ' + sameCount + ' 件' : '✓ 一致 ' + sameCount + ' 行' }));
+        var MAX_ROW_ITEMS = 30;
+        items.slice(0, MAX_ROW_ITEMS).forEach(function (x) {
+          var li = el('li', {});
+          if (x.alert) {
+            alertTotal++;
+            li.appendChild(el('span', { class: 'fss-alert-badge', text: '⚠ 要確認' }));
+            li.appendChild(el('span', { text: x.text }));
+          } else if (x.strong) {
+            li.appendChild(el('strong', { text: '変更あり　' }));
+            li.appendChild(el('span', { text: x.text }));
+          } else {
+            li.appendChild(el('span', { text: x.text }));
+          }
+          ul.appendChild(li);
+        });
+        if (items.length > MAX_ROW_ITEMS) ul.appendChild(el('li', { text: 'ほか ' + (items.length - MAX_ROW_ITEMS) + ' 件' }));
+      }
+      if (isUchiwake && (addCount > 0 || goneCount > 0)) {
+        ul.appendChild(el('li', { text: '相手先の入れ替わり: 当期のみ ' + addCount + ' 件・前期のみ ' + goneCount + ' 件（横串が組めないから個別には出さないよ）' }));
+      }
+      area.appendChild(ul);
+      if (!nameField) {
+        area.appendChild(note('この明細は氏名・名称系の項目が見つからなかったから、行番号どうしで比較してるよ（行の並び替えがあるとズレて見えるかも）。'));
+      }
+    });
+    if (alertTotal === 0) {
+      area.appendChild(note(isUchiwake
+        ? '内訳書は同じ相手先どうしの金額の増減だけ比較してるよ（住所・摘要の変更や相手先の入れ替わりは個別表示しない）。'
+        : '明細行は氏名・名称でマッチングしてるから、行の並び替えは差異にならないよ。株数・金額・住所の変更だけを拾ってるよ。'));
+    }
+    return true;
+  }
+
+  /* 税率・基本情報の変遷（v0.4.3・2026-08-26 けんとさん指示）
+   * - 税率: 変わっていなくても前期・当期を並べて表示（税率の選択ミス検出用。変わっていたら⚠）
+   * - 資本金・出資金／株主構成（別表二の明細行）／納税地・本店所在地:
+   *   本社移転・増資・株主異動の変遷が追えるように、前期・当期を並べて表示（変更は「変更あり」表示） */
+  function renderTraceSection(area, prev, cur) {
+    var RE_RATE = /税率/;
+    var RE_BASIC = /資本金|出資金|株主|株式数|議決権|持株|出資の金額|納税地|本店|所在地/;
+
+    function classify(label, key) {
+      if (ROW_KEY_RE.test(key)) return null; // 明細行（別表二の株主等）は「明細行の突合」で行単位比較する（v0.4.5）
+      if (RE_RATE.test(label)) return 'rate';
+      if (RE_BASIC.test(label)) return 'basic';
+      return null;
+    }
+
+    var prevMap = {};
+    prev.items.forEach(function (it) { prevMap[it.k] = it; });
+    var seen = {};
+    var rows = [];
+    cur.items.forEach(function (it) {
+      var lb = it.label || it.k;
+      var cat = classify(lb, it.k);
+      if (!cat) return;
+      seen[it.k] = true;
+      rows.push({ cat: cat, label: lb, prev: prevMap[it.k] || null, cur: it });
+    });
+    prev.items.forEach(function (it) {
+      if (seen[it.k]) return;
+      var lb = it.label || it.k;
+      var cat = classify(lb, it.k);
+      if (!cat) return;
+      rows.push({ cat: cat, label: lb, prev: it, cur: null });
+    });
+    if (rows.length === 0) return;
+
+    var MAX_TRACE_ROWS = 80;
+    var overflow = rows.length > MAX_TRACE_ROWS;
+    rows = rows.slice(0, MAX_TRACE_ROWS);
+
+    function dispVal(it) {
+      if (!it) return null;
+      return it.n != null ? fmt(it.n) : String(it.v);
+    }
+
+    var changed = 0;
+    var table = el('table', { class: 'fss-table' });
+    table.appendChild(el('tr', {}, [
+      el('th', { text: '項目' }), el('th', { text: '前年' }), el('th', { text: '当期' }), el('th', { text: '判定' })
+    ]));
+    rows.forEach(function (r) {
+      var pv = dispVal(r.prev);
+      var cv = dispVal(r.cur);
+      var judgeCell = el('td', {});
+      if (pv === cv) {
+        judgeCell.textContent = '✓ 同じ';
+      } else {
+        changed++;
+        if (r.cat === 'rate') {
+          judgeCell.appendChild(el('span', { class: 'fss-alert-badge', text: '⚠ 要確認' }));
+          judgeCell.appendChild(el('span', { text: '税率が前期と違うよ。選択ミスか税制改正か確認してね' }));
+        } else if (!r.prev) {
+          judgeCell.textContent = '当期から追加';
+        } else if (!r.cur) {
+          judgeCell.textContent = '当期は記載なし';
+        } else {
+          judgeCell.appendChild(el('strong', { text: '変更あり' }));
+        }
+      }
+      var numCls = (r.cur && r.cur.n != null) || (r.prev && r.prev.n != null) ? 'fss-num' : '';
+      table.appendChild(el('tr', { class: pv !== cv ? 'fss-warn' : '' }, [
+        el('td', { text: r.label }),
+        el('td', { class: numCls, text: pv == null ? '（なし）' : pv }),
+        el('td', { class: numCls, text: cv == null ? '（なし）' : cv }),
+        judgeCell
+      ]));
+    });
+
+    var d = el('details', { class: 'fss-manual' }, [
+      el('summary', { text: '税率・基本情報の変遷（税率／資本金／株主構成／所在地）: ' + rows.length + ' 項目・変更 ' + changed + ' 件' })
+    ]);
+    if (changed > 0) d.open = true; // 変更があるときは開いた状態で見せる
+    d.appendChild(el('div', { class: 'fss-table-wrap' }, [table]));
+    d.appendChild(note('税率は「変わっていないこと」の確認用にすべて表示してるよ。資本金・株主構成・所在地の変更は増資・本社移転・株主異動の反映か、転記ミスかを確認してね。'));
+    if (overflow) d.appendChild(note('項目が多いので先頭 ' + MAX_TRACE_ROWS + ' 件だけ表示してるよ。'));
+    area.appendChild(d);
   }
 
   /* 繰越整合チェック（v0.4.2・2026-08-26 けんとさん指示）
@@ -1217,23 +2077,14 @@
     }
 
     // --- 汎用の繰越整合（前期の翌期首/期末現在 ↔ 当期の期首現在。別表五(一)・欠損金等） ---
-    function baseOf(lb) {
-      return lb.replace(/差引翌期首現在|翌期首現在|期首現在|期末現在/g, '').replace(/\s+/g, '');
-    }
-    var prevEnds = {};
-    prev.items.forEach(function (it) {
-      var lb = it.label || '';
-      if (it.n == null || !/翌期首現在|期末現在/.test(lb)) return;
-      var b = baseOf(lb);
-      if (/納税充当金/.test(b)) return; // 上の専用チェックと重複させない
-      prevEnds[b] = (prevEnds[b] === undefined) ? it.n : null; // 同名複数は曖昧なので突合しない
-    });
+    // 正規化・突合は見立て列と共通のヘルパー（rollBaseOf / buildPrevEndMap）を使う
+    var prevEnds = buildPrevEndMap(prev);
     var rollOk = 0;
     cur.items.forEach(function (it) {
       var lb = it.label || '';
       if (it.n == null || !/期首現在/.test(lb) || /翌期首/.test(lb)) return;
-      var b = baseOf(lb);
-      if (/納税充当金/.test(b)) return;
+      var b = rollBaseOf(lb);
+      if (/納税充当金/.test(b)) return; // 上の専用チェックと重複させない
       var pn = prevEnds[b];
       if (pn === undefined || pn === null) return;
       if (pn === it.n) {
@@ -1316,12 +2167,17 @@
     ]));
     area.appendChild(result);
 
+    // 当期の決算期末（中間申告の対象期間・期限を具体日付で出すのに使う。
+    // 2026-08-26 けんとさん指示「予定納税の時期は決算期からわかるよね？」）
+    var curPeriodEnd = null;
+
     // v0.4: 当期の法人税申告書（内部API・GETのみ）から確定税額を自動プレフィル。
     // 別表一（10100100）と第六号様式（206000000）の欄は itemTitle で特定する
     // （事業所ごとの様式差に強くするため。見つからない欄は手入力のまま）
     fetchCurrentReturnK(CORP).then(function (ret) {
       if (!ret || !ret.id) throw new Error('no return');
       var msgs = [];
+      curPeriodEnd = ret.tax_period_end_date || String(ret.end_date || '').slice(0, 10);
       var mo = monthsBetween(
         ret.tax_period_start_date || String(ret.start_date || '').slice(0, 10),
         ret.tax_period_end_date || String(ret.end_date || '').slice(0, 10)
@@ -1385,7 +2241,17 @@
         return;
       }
 
-      result.appendChild(el('p', { class: 'fss-summary', text: '判定: 中間申告あり（来期開始から6ヶ月経過日から2ヶ月以内に申告・納付）' }));
+      // 決算期がAPIから取れていれば、対象期間・期限を具体日付で出す
+      // （中間の対象期間＝来期開始から6ヶ月・申告納付期限＝6ヶ月経過日から2ヶ月以内＝来期開始+8ヶ月の前日）
+      var nextStart = curPeriodEnd ? shiftDate(curPeriodEnd, 0, 1) : null;
+      var judge = '判定: 中間申告あり';
+      if (nextStart) {
+        judge += '（対象期間 ' + jpDate(nextStart) + '〜' + jpDate(shiftDate(nextStart, 6, -1))
+          + '・申告/納付期限 ' + jpDate(shiftDate(nextStart, 8, -1)) + '）';
+      } else {
+        judge += '（来期開始から6ヶ月経過日から2ヶ月以内に申告・納付）';
+      }
+      result.appendChild(el('p', { class: 'fss-summary', text: judge }));
       var table = el('table', { class: 'fss-table' });
       table.appendChild(el('tr', {}, [el('th', { text: '税目' }), el('th', { text: '中間納付見込額' })]));
       rows.forEach(function (r) {
@@ -1393,12 +2259,17 @@
       });
       table.appendChild(el('tr', { class: 'fss-total' }, [el('td', { text: '合計' }), el('td', { class: 'fss-num', text: fmt(total) + ' 円' })]));
       result.appendChild(el('div', { class: 'fss-table-wrap' }, [table]));
-      result.appendChild(note('計算式: 当期の確定税額 × 6 ÷ 当期の月数（100円未満切捨て）。実際の予定申告書・納付書は自治体からの送付額と突き合わせてね。仮決算による中間申告を選ぶと納付額を抑えられる場合があるよ（要検討事項）。'));
+      result.appendChild(note('計算式: 当期の確定税額 × 6 ÷ 当期の月数（100円未満切捨て）。実際の予定申告書・納付書は自治体からの送付額と突き合わせてね。仮決算による中間申告を選ぶと納付額を抑えられる場合があるよ（要検討事項）。'
+        + (nextStart ? '期限は来期も同じ決算期が続く前提で、土日祝にあたるときは翌平日になるよ。' : '')));
 
       result.appendChild(el('button', {
         class: 'fss-btn', text: '試算結果をコピー',
         onclick: function (ev) {
           var lines = ['【来期の中間申告（予定納税）試算・前期実績基準】', '当期の確定法人税額: ' + fmt(fH.value()) + ' 円 / 月数: ' + months];
+          if (nextStart) {
+            lines.push('対象期間: ' + jpDate(nextStart) + '〜' + jpDate(shiftDate(nextStart, 6, -1))
+              + ' / 申告・納付期限: ' + jpDate(shiftDate(nextStart, 8, -1)) + '（土日祝なら翌平日）');
+          }
           rows.forEach(function (r) { lines.push(r[0] + ': ' + fmt(r[1]) + ' 円'); });
           lines.push('合計: ' + fmt(total) + ' 円');
           lines.push('※100円未満切捨て・前期実績基準。仮決算方式は別途検討。');
@@ -1418,8 +2289,12 @@
     ]));
     area.appendChild(result);
 
+    // 当期の課税期間末（中間申告の期限を具体日付で出すのに使う）
+    var curPeriodEnd = null;
+
     // v0.3: 当期の消費税申告書（内部API・GETのみ）から差引税額（aaj00100）を自動プレフィル
     fetchCurrentReturnK(CONS).then(function (ret) {
+      curPeriodEnd = (ret && (ret.tax_period_end_date || String(ret.end_date || '').slice(0, 10))) || null;
       return fetchSheetRaw(401010011, ret && ret.id).then(function (raw) {
         var g = (raw && raw.values && raw.values.default_group) || {};
         var msgs = [];
@@ -1463,7 +2338,21 @@
       var totalNat = nat * plan.count;
       var totalLocal = local * plan.count;
 
-      result.appendChild(el('p', { class: 'fss-summary', text: '判定: 中間申告 ' + plan.label }));
+      // 課税期間末がAPIから取れていれば、来期の各中間申告の期限を具体日付で出す。
+      // 期限＝各中間対象期間の末日の翌日から2ヶ月以内（年11回の初回だけは開始から2ヶ月経過日から2ヶ月以内＝最初の2ヶ月分が同日）
+      var nextStart = curPeriodEnd ? shiftDate(curPeriodEnd, 0, 1) : null;
+      var dueText = '';
+      if (nextStart) {
+        if (plan.count === 1) {
+          dueText = '対象期間 ' + jpDate(nextStart) + '〜' + jpDate(shiftDate(nextStart, 6, -1))
+            + '・申告/納付期限 ' + jpDate(shiftDate(nextStart, 8, -1));
+        } else if (plan.count === 3) {
+          dueText = '納付期限 ' + [5, 8, 11].map(function (k) { return jpDate(shiftDate(nextStart, k, -1)); }).join('、');
+        } else {
+          dueText = '初回の納付期限 ' + jpDate(shiftDate(nextStart, 4, -1)) + '（最初の2ヶ月分）・以降は各1ヶ月分を期間末から2ヶ月以内';
+        }
+      }
+      result.appendChild(el('p', { class: 'fss-summary', text: '判定: 中間申告 ' + plan.label + (dueText ? '（' + dueText + '）' : '') }));
       var table = el('table', { class: 'fss-table' });
       table.appendChild(el('tr', {}, [el('th', { text: '' }), el('th', { text: '1回あたり' }), el('th', { text: '年間合計（' + plan.count + '回）' })]));
       [['消費税（国税）', nat, totalNat], ['地方消費税', local, totalLocal], ['納付額合計', per, totalNat + totalLocal]].forEach(function (r, i) {
@@ -1474,7 +2363,8 @@
         ]));
       });
       result.appendChild(el('div', { class: 'fss-table-wrap' }, [table]));
-      result.appendChild(note('計算式: 確定消費税額（国税分）× ' + plan.frac + '/12（100円未満切捨て）＋ 地方消費税（国税×22/78）。実際の中間納付は税務署からの通知額が基準になるよ。仮決算方式の選択も可能（要検討事項）。'));
+      result.appendChild(note('計算式: 確定消費税額（国税分）× ' + plan.frac + '/12（100円未満切捨て）＋ 地方消費税（国税×22/78）。実際の中間納付は税務署からの通知額が基準になるよ。仮決算方式の選択も可能（要検討事項）。'
+        + (dueText ? '期限は来期も同じ課税期間（12ヶ月）の前提で、土日祝にあたるときは翌平日になるよ。' : '')));
 
       result.appendChild(el('button', {
         class: 'fss-btn', text: '試算結果をコピー',
@@ -1482,7 +2372,7 @@
           var lines = [
             '【来期の消費税 中間申告試算】',
             '当期の確定消費税額（国税分）: ' + fmt(c) + ' 円',
-            '判定: ' + plan.label,
+            '判定: ' + plan.label + (dueText ? '（' + dueText + '・土日祝なら翌平日）' : ''),
             '1回あたり: 国税 ' + fmt(nat) + ' 円 ＋ 地方 ' + fmt(local) + ' 円 ＝ ' + fmt(per) + ' 円',
             '年間中間合計: ' + fmt(totalNat + totalLocal) + ' 円',
             '※100円未満切捨て・前期実績基準・12ヶ月決算前提。'

@@ -1,14 +1,18 @@
 {
   "manifest_version": 3,
   "name": "freee申告サポートボタン",
-  "version": "0.4.2",
-  "description": "freee申告（法人税・消費税）の画面内ボタン列に「前年比較」「予定納税試算」を追加します。法人税・消費税とも内部API（GETのみ）で申告データを自動取得。読み取り専用で、freeeへの書き込みは行いません。",
+  "version": "0.4.6",
+  "description": "freee申告（法人税・消費税）の画面内ボタン列に「前年比較」「予定納税試算」を追加します。法人税・消費税とも内部API（GETのみ）で申告データを自動取得。読み取り専用で、freeeへの書き込みは行いません。法人基礎データ照合では api.ichisan.jp（国税庁法人番号公表サイト系データ）へ社名または法人番号のみを送信します（金額・申告データは送信しません）。",
   "permissions": [
     "storage"
   ],
   "host_permissions": [
-    "https://secure.freee.co.jp/*"
+    "https://secure.freee.co.jp/*",
+    "https://api.ichisan.jp/*"
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": [
